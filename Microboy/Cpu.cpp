@@ -1,11 +1,15 @@
+#include <fmt/core.h>
 #include "Cpu.h"
+#include "Opcode.h"
 
-// Flags Struct
+//-----------------------------------------------------
+// Flags Methods
+//-----------------------------------------------------
 void Flag::from_byte(uint8_t byte) {
-	Z = byte  & 0b00010000 >> 4;
-	N = byte  & 0b00100000 >> 5;
-	H = byte  & 0b01000000 >> 6;
-	C = byte  & 0b10000000 >> 7;
+	Z = (byte & 0x10) >> 4;
+	N = (byte & 0x20) >> 5;
+	H = (byte & 0x40) >> 6;
+	C = (byte & 0x80) >> 7;
 	pad = 0;
 }
 uint8_t Flag::to_byte() {
@@ -17,9 +21,11 @@ uint8_t Flag::to_byte() {
 	return byte;
 }
 
-
+//-----------------------------------------------------
+// Cpu Methods
+//-----------------------------------------------------
 void Cpu::connect_bus(std::shared_ptr<MemoryBus> bus) {
-	bus_m = bus;
+	m_bus = bus;
 }
 
 int Cpu::step(int cycles) {
@@ -36,30 +42,100 @@ int Cpu::step(int cycles) {
 }
 
 void Cpu::reset() {
-	reg.A = 0x01;
-	reg.F.from_byte(0x00);
-	reg.B = 0x01;
-	reg.C = 0x00;
-	reg.D = 0x13;
-	reg.E = 0xD8;
-	reg.H = 0x01;
-	reg.L = 0x4D;
-	PC = 0x100;
-	SP = 0xFFFE;
+	m_flags.from_byte(0x00);
+	m_reg[B] = 0x01;
+	m_reg[C] = 0x00;
+	m_reg[D] = 0x13;
+	m_reg[E] = 0xD8;
+	m_reg[H] = 0x01;
+	m_reg[L] = 0x4D;
+	m_reg[A] = 0x01;
+	m_PC = 0x100;
+	m_SP = 0xFFFE;
 }
 
-void Cpu::fetch() {
-	// Fetch data
-	return;
+//--------------------------------------------------
+// Opcode handlers
+//--------------------------------------------------
+
+inline int Unimplemented_Opcode(uint8_t opcode) {
+	fmt::print("unimplemented opcode {:#02x}-{}", opcode, CYCLE_TABLE_DEBUG[opcode].name);
+	exit(-1);
+}
+
+inline int Unimplemented_Opcode_CB(uint8_t opcode) {
+	fmt::print("unimplemented opcode {:#02x}-{}", opcode, CYCLE_TABLE_DEBUG_CB[opcode].name);
+	exit(-1);
+}
+
+//--------------------------------------------------
+// Cpu functions
+//--------------------------------------------------
+
+uint8_t Cpu::read_byte(RegisterName8Bit reg) {
+	if (reg == F) return m_flags.to_byte();
+	return m_reg[reg];
+}
+
+void Cpu::write_byte(RegisterName8Bit reg, uint8_t value) {
+	if (reg == F) { m_flags.from_byte(value & 0xF0); return; }
+	m_reg[reg] = value;
+}
+
+uint16_t Cpu::read_word(RegisterName16Bit reg) {
+	if (reg == SP) return m_SP;
+	switch (reg) {
+	case BC: return m_reg[B] << 8 | m_reg[C];
+	case DE: return m_reg[D] << 8 | m_reg[E];
+	case HL: return m_reg[H] << 8 | m_reg[L];
+	case AF: return m_reg[A] << 8 | m_flags.to_byte();
+	default: return 0;
+	}
+}
+
+void Cpu::write_word(RegisterName16Bit reg, uint16_t value) {
+	if (reg == SP) { m_SP = value;  return; }
+	switch (reg) {
+	case BC: { m_reg[B] = (value >> 8) & 0xFF; m_reg[C] = value & 0xFF; return; }
+	case DE: { m_reg[D] = (value >> 8) & 0xFF; m_reg[E] = value & 0xFF; return; }
+	case HL: { m_reg[H] = (value >> 8) & 0xFF; m_reg[L] = value & 0xFF; return; }
+	case AF: { m_reg[A] = (value >> 8) & 0xFF; m_flags.from_byte(value & 0xF0); return; }
+	}
+}
+
+inline void Cpu::fetch() {
+	m_opcode = m_bus->read_byte(m_PC);
 }
 
 int Cpu::decode() {
 	// decode the instruction and set the instruction to ease execution
-	return 0;
+	int cycles = 0;
+	uint16_t inc_pc = 0;
+	if (m_opcode == 0xcb) {
+		++m_PC;
+		m_opcode = m_bus->read_byte(m_PC);
+		inc_pc = CYCLE_TABLE_DEBUG_CB[m_opcode].len;
+		cycles = CYCLE_TABLE_DEBUG_CB[m_opcode].cycles;
+	} else {
+		inc_pc = CYCLE_TABLE_DEBUG[m_opcode].len;
+		cycles = CYCLE_TABLE_DEBUG[m_opcode].cycles;
+	}
+
+	// TODO - add the things we need to make decoding instructions easier
+	m_data[0] = m_bus->read_byte(m_PC+1);
+	m_data[1] = m_bus->read_byte(m_PC+2);
+
+	m_PC += inc_pc;
+
+	return cycles;
 }
 
 int Cpu::execute() {
-	// execute instruction;
+	switch (m_opcode) {
+	case NOP: { return 0;  }
+	case LD_BC_u16: { m_reg[B] = m_data[1]; m_reg[C] = m_data[0];  return 0; }
+	default: Unimplemented_Opcode(m_opcode);
+	}
 	return 0;
 }
 

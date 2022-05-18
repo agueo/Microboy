@@ -53,3 +53,16 @@ void MemoryBus::write_byte(uint16_t addr, uint8_t value) {
 	}
 	return;
 }
+
+uint16_t MemoryBus::read_word(uint16_t addr) {
+	uint16_t lo, hi;
+	lo = read_byte(addr);
+	hi = read_byte(addr + 1);
+	return ((hi << 8) & 0xFF00) | lo & 0xFF;
+}
+
+void MemoryBus::write_word(uint16_t addr, uint16_t value) {
+	// lo write
+	write_byte(addr, value & 0xFF);
+	write_byte(addr + 1, (value >> 8) & 0xFF);
+}

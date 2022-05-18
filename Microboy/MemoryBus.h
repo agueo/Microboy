@@ -28,7 +28,9 @@ public:
 	void reset();
 	void load_cart(std::unique_ptr<Cartridge> c);
 	uint8_t read_byte(uint16_t addr);
+	uint16_t read_word(uint16_t addr);
 	void write_byte(uint16_t addr, uint8_t value);
+	void write_word(uint16_t addr, uint16_t value);
 	
 
 private:

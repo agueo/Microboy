@@ -37,8 +37,10 @@ int main(int, char **) {
 	
 	// DMG objects
 	Cpu cpu{};
+	cpu.reset();
 	std::shared_ptr<MemoryBus> bus = std::make_shared<MemoryBus>();
 	cpu.connect_bus(bus);
+	cpu.read_byte(B);
 
 	
 	// control flags
@@ -65,11 +67,6 @@ int main(int, char **) {
 				SDL_assert(cart != nullptr);
 				bus->load_cart(std::move(cart));
 				rom_loaded = true;
-
-				fmt::print("Print out the first 16 bytes of the rom\n");
-				for (uint16_t i = 0; i < 16; ++i) {
-					fmt::print("{:#02x}\n", bus->read_byte(i));
-				}
 			}
 		}
 
