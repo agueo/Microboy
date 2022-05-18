@@ -11,10 +11,6 @@ struct Opcode {
 	uint8_t cycles_extra;
 };
 
-enum OPCODE {
-	NOP, LD_BC_u16, LD_BC_A
-};
-
 enum class OPCODE_CB {
 };
 

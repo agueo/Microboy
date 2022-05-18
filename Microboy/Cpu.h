@@ -55,8 +55,12 @@ private:
 	uint8_t m_opcode;
 	// useful things for executing instructions
 	// TODO look through all the instructions and glean out the common ones
-	uint8_t m_data[2];
 	// TODO - which registers 8 bit src and dest
+	RegisterName8Bit m_r1;
+	RegisterName8Bit m_r2;
+	uint8_t imm_u8;
+	uint16_t imm_u16;
+
 	// TODO - which registers 16 bit
 	// TODO - an address?
 	// TODO - a signed value

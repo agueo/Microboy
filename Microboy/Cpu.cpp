@@ -33,9 +33,8 @@ int Cpu::step(int cycles) {
 	while (cycles_taken < cycles) {
 		// handle interrupts and halt
 		fetch();
-		decode();
+		cycles_taken += decode();
 		cycles_taken += execute();
-		++cycles_taken;
 	}
 
 	return cycles_taken;
@@ -122,18 +121,41 @@ int Cpu::decode() {
 	}
 
 	// TODO - add the things we need to make decoding instructions easier
-	m_data[0] = m_bus->read_byte(m_PC+1);
-	m_data[1] = m_bus->read_byte(m_PC+2);
+	m_r1 = static_cast<RegisterName8Bit>((m_opcode >> 3) & 0x7);
+	m_r2 = static_cast<RegisterName8Bit>(m_opcode & 0x7);
+	imm_u8 = m_bus->read_byte(m_PC + 1);
+	imm_u16 = m_bus->read_word(m_PC + 1);
 
+	// Increment the PC to the next instruction // TODO - verify this doesn't cause issues
 	m_PC += inc_pc;
 
 	return cycles;
 }
 
+// Return any extra cycles taken due to memory read/writes
 int Cpu::execute() {
 	switch (m_opcode) {
-	case NOP: { return 0;  }
-	case LD_BC_u16: { m_reg[B] = m_data[1]; m_reg[C] = m_data[0];  return 0; }
+	case 0: { return 0;  }
+	/*-------------------- Load Instructions --------------------*/
+	// LD R, R
+	case 0x40: case 0x41: case 0x42: case 0x43: case 0x44: case 0x45: case 0x47: // ld b, r
+	case 0x48: case 0x49: case 0x4a: case 0x4b: case 0x4c: case 0x4d: case 0x4f: // ld c, r
+	case 0x50: case 0x51: case 0x52: case 0x53: case 0x54: case 0x55: case 0x57: // ld d, r
+	case 0x58: case 0x59: case 0x5a: case 0x5b: case 0x5c: case 0x5d: case 0x5f: // ld e, r
+	case 0x60: case 0x61: case 0x62: case 0x63: case 0x64: case 0x65: case 0x67: // ld h, r
+	case 0x68: case 0x69: case 0x6a: case 0x6b: case 0x6c: case 0x6d: case 0x6f: // ld l, r
+	case 0x78: case 0x79: case 0x7a: case 0x7b: case 0x7c: case 0x7d: case 0x7f: // ld l, r
+	{
+		write_byte(m_r1, read_byte(m_r2));
+		break;
+	}
+	// LD R, u8
+	case 0x06: case 0x16: case 0x26: case 0x0E: case 0x1E: case 0x2E: case 0x3E:
+	{
+		write_byte(m_r1, imm_u8);
+		break;
+	}
+	/*-------------------- Arithmetic Instructions --------------------*/
 	default: Unimplemented_Opcode(m_opcode);
 	}
 	return 0;
