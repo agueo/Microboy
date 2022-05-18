@@ -37,6 +37,7 @@ TEST_F(TestOpcodes, TestOpcode_ld_r_r) {
 		0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x67, // LD H, r
 		0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6F, // LD L, r
 		0x78, 0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7F, // LD L, r
+		0x00, 0x00
 	};
 	auto cart = std::make_unique<Mbc0>(rom_data);
 	bus->load_cart(std::move(cart));
@@ -89,5 +90,36 @@ TEST_F(TestOpcodes, TestOpcode_ld_r_u8) {
 		auto cycles_taken = cpu.step(1);
 		ASSERT_EQ(cycles_taken, exp.cycles_taken);
 		ASSERT_EQ(cpu.read_byte(exp.r), exp.value_expected);
+	}
+}
+
+TEST_F(TestOpcodes, TestOpcode_ld_r_u16) {
+	cpu.write_word(BC, 0x0000);
+	cpu.write_word(DE, 0x0000);
+	cpu.write_word(HL, 0x0000);
+	cpu.write_word(AF, 0x0000);
+
+	// test rom
+	std::vector<uint8_t> rom_data { 
+		0x01, 0xAD, 0xDE, 0x11, 0xFE, 0xCA, 0x21, 0xED, 0xFE, 0x31, 0xEF, 0xBE, 0x00
+	};
+	auto cart = std::make_unique<Mbc0>(rom_data);
+	bus->load_cart(std::move(cart));
+	// expected state structure
+	struct expected {
+		RegisterName16Bit r;
+		uint16_t value_expected;
+		int cycles_taken;
+	};
+	// tables driven testing
+	std::vector<expected> expected_state {
+		{BC, 0xDEAD, 12}, {DE, 0xCAFE, 12}, {HL, 0xFEED, 12}, {SP, 0xBEEF, 12}
+	};
+
+	// run the test for all ld r, r opcodes
+	for (const auto & exp : expected_state) {
+		auto cycles_taken = cpu.step(1);
+		ASSERT_EQ(cycles_taken, exp.cycles_taken);
+		ASSERT_EQ(cpu.read_word(exp.r), exp.value_expected);
 	}
 }

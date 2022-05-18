@@ -21,7 +21,7 @@ TEST(CpuTests, CpuTestRegReadWriteByte) {
 TEST(CpuTests, CpuTestRegReadWriteWord) {
 	Cpu cpu{};
 
-	std::vector<uint16_t> reg_state{ 0xDEAD, 0xBEEF, 0xCAFE, 0xFEE0 };
+	std::vector<uint16_t> reg_state{ 0xDEAD, 0xBEEF, 0xCAFE, 0xFADE, 0xFEE0 };
 	for (uint8_t i = BC; i <= AF; ++i) {
 		cpu.write_word((RegisterName16Bit)i, reg_state.at(i));
 		ASSERT_EQ(cpu.read_word((RegisterName16Bit)i), reg_state.at(i));

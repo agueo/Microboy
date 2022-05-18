@@ -21,7 +21,7 @@ enum RegisterName8Bit : uint8_t {
 };
 
 enum RegisterName16Bit : uint8_t {
-	BC, DE, HL, AF, SP
+	BC, DE, HL, SP, AF
 };
 
 class Cpu {
@@ -58,6 +58,7 @@ private:
 	// TODO - which registers 8 bit src and dest
 	RegisterName8Bit m_r1;
 	RegisterName8Bit m_r2;
+	RegisterName16Bit m_r16;
 	uint8_t imm_u8;
 	uint16_t imm_u16;
 

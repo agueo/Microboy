@@ -123,6 +123,7 @@ int Cpu::decode() {
 	// TODO - add the things we need to make decoding instructions easier
 	m_r1 = static_cast<RegisterName8Bit>((m_opcode >> 3) & 0x7);
 	m_r2 = static_cast<RegisterName8Bit>(m_opcode & 0x7);
+	m_r16 = static_cast<RegisterName16Bit>((m_opcode >> 4) & 7); // will only work for BC, DE, HL, SP NOTE: AF and HL will need to be handled separately
 	imm_u8 = m_bus->read_byte(m_PC + 1);
 	imm_u16 = m_bus->read_word(m_PC + 1);
 
@@ -153,6 +154,12 @@ int Cpu::execute() {
 	case 0x06: case 0x16: case 0x26: case 0x0E: case 0x1E: case 0x2E: case 0x3E:
 	{
 		write_byte(m_r1, imm_u8);
+		break;
+	}
+	// LD R, u16
+	case 0x01: case 0x11: case 0x21: case 0x31:
+	{
+		write_word(m_r16, imm_u16);
 		break;
 	}
 	/*-------------------- Arithmetic Instructions --------------------*/
