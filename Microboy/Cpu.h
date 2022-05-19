@@ -20,6 +20,8 @@ enum RegisterName8Bit : uint8_t {
 	B, C, D, E, H, L, F, A
 };
 
+// TODO - When we need to parse the different group types 
+// we may need to overload the read_word and write_word methods
 enum RegisterName16Bit : uint8_t {
 	BC, DE, HL, SP, AF
 };

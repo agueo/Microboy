@@ -123,3 +123,70 @@ TEST_F(TestOpcodes, TestOpcode_ld_r_u16) {
 		ASSERT_EQ(cpu.read_word(exp.r), exp.value_expected);
 	}
 }
+
+TEST_F(TestOpcodes, TestOpcode_ld_r_m_hl) {
+	// Test LD R, (HL)
+	// setup some data where HL is pointing. Lets use WRAM addresses
+	bus->write_word(WRAM_BASE + 0x04, 0xCEED);
+	cpu.write_word(HL, WRAM_BASE + 0x04);
+
+	// test rom
+	std::vector<uint8_t> rom_data { 
+		0x46, 0x56, 0x66, 0x4E, 0x5E, 0x6E, 0x7E, 0x00, 0x00
+	};
+	auto cart = std::make_unique<Mbc0>(rom_data);
+	bus->load_cart(std::move(cart));
+	// expected state structure
+	struct expected {
+		RegisterName8Bit r;
+		uint8_t value_expected;
+		int cycles_taken;
+	};
+	// tables driven testing
+	std::vector<expected> expected_state {
+		{B, 0xED, 8}, {D, 0xED, 8}, {H, 0xED, 8}, {C, 0xED, 8}, {E, 0xED, 8}, {L, 0xED, 8}, {A, 0xED, 8}, 
+	};
+
+	for (const auto & exp : expected_state) {
+		auto cycles_taken = cpu.step(1);
+		ASSERT_EQ(cycles_taken, exp.cycles_taken);
+		ASSERT_EQ(cpu.read_byte(exp.r), exp.value_expected);
+		// Reset HL to 0xC004 -> 0xCEED, NOTE: GB is litte endian so we are reading the LSB byte (0xED)
+		cpu.write_word(HL, WRAM_BASE + 0x04);
+	}
+}
+
+TEST_F(TestOpcodes, TestOpcode_ld_m_hl_r) {
+	// Test LD (HL), R
+	cpu.write_word(BC, 0x1234);
+	cpu.write_word(DE, 0x5678);
+	cpu.write_word(HL, WRAM_BASE);
+	cpu.write_word(AF, 0x9000);
+
+	// test rom
+	std::vector<uint8_t> rom_data { 
+		0x70, 0x71, 0x72, 0x73, 0x77, 0x74, 0x75, 0x00, 0x00
+	};
+	auto cart = std::make_unique<Mbc0>(rom_data);
+	bus->load_cart(std::move(cart));
+	// expected state structure
+	struct expected {
+		uint16_t addr;
+		uint8_t value_expected;
+		int cycles_taken;
+	};
+	// tables driven testing
+	std::vector<expected> expected_state {
+		{WRAM_BASE, 0x12, 8}, {WRAM_BASE, 0x34, 8}, {WRAM_BASE, 0x56, 8}, {WRAM_BASE, 0x78, 8}, {WRAM_BASE, 0x90, 8}, {WRAM_BASE, 0xC0, 8}, {WRAM_BASE, 0x00, 8}, 
+	};
+
+	for (const auto & exp : expected_state) {
+		auto cycles_taken = cpu.step(1);
+		ASSERT_EQ(cycles_taken, exp.cycles_taken);
+		ASSERT_EQ(bus->read_byte(exp.addr), exp.value_expected);
+		if (exp.value_expected == 0xC0 || exp.value_expected == 0x00) {
+			// reset the value to 0xc000
+			cpu.write_word(HL, WRAM_BASE);
+		}
+	}
+}

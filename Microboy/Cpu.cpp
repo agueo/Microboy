@@ -137,7 +137,7 @@ int Cpu::decode() {
 int Cpu::execute() {
 	switch (m_opcode) {
 	case 0: { return 0;  }
-	/*-------------------- Load Instructions --------------------*/
+	/*-------------------- Load Instructions 8/16 bit --------------------*/
 	// LD R, R
 	case 0x40: case 0x41: case 0x42: case 0x43: case 0x44: case 0x45: case 0x47: // ld b, r
 	case 0x48: case 0x49: case 0x4a: case 0x4b: case 0x4c: case 0x4d: case 0x4f: // ld c, r
@@ -160,6 +160,20 @@ int Cpu::execute() {
 	case 0x01: case 0x11: case 0x21: case 0x31:
 	{
 		write_word(m_r16, imm_u16);
+		break;
+	}
+	// LD R, (HL)
+	case 0x46: case 0x56: case 0x66:
+	case 0x4E: case 0x5E: case 0x6E: case 0x7E:
+	{
+		uint8_t read_val = m_bus->read_byte(read_word(HL));
+		write_byte(m_r1, read_val);
+		break;
+	}
+	// LD (HL), R
+	case 0x70: case 0x71: case 0x72: case 0x73: case 0x74: case 0x75: case 0x77:
+	{
+		m_bus->write_byte(read_word(HL), read_byte(m_r2));
 		break;
 	}
 	/*-------------------- Arithmetic Instructions --------------------*/

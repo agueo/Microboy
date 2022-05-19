@@ -24,3 +24,6 @@ TEST(BusTests, BusReadWriteWord) {
 	uint16_t value = bus.read_word(HRAM_BASE + 8);
 	ASSERT_EQ(value, 0xDEAD);
 }
+
+// TODO add negative tests for reading and writing to invalid areas
+// TODO Do the same for the cart ie reading to rom and
