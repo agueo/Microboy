@@ -6,18 +6,18 @@
 // Flags Methods
 //-----------------------------------------------------
 void Flag::from_byte(uint8_t byte) {
-	Z = (byte & 0x10) >> 4;
-	N = (byte & 0x20) >> 5;
-	H = (byte & 0x40) >> 6;
-	C = (byte & 0x80) >> 7;
+	C = (byte & 0x10) >> 4;
+	H = (byte & 0x20) >> 5;
+	N = (byte & 0x40) >> 6;
+	Z = (byte & 0x80) >> 7;
 	pad = 0;
 }
 uint8_t Flag::to_byte() {
 	uint8_t byte = 0;
-	byte |= Z << 4;
-	byte |= N << 5;
-	byte |= H << 6;
-	byte |= C << 7;
+	byte |= C << 4;
+	byte |= H << 5;
+	byte |= N << 6;
+	byte |= Z << 7;
 	return byte;
 }
 
@@ -118,10 +118,13 @@ int Cpu::decode() {
 		m_opcode = m_bus->read_byte(m_PC);
 		inc_pc = CYCLE_TABLE_DEBUG_CB[m_opcode].len;
 		cycles = CYCLE_TABLE_DEBUG_CB[m_opcode].cycles;
-	} else {
-		inc_pc = CYCLE_TABLE_DEBUG[m_opcode].len;
-		cycles = CYCLE_TABLE_DEBUG[m_opcode].cycles;
-	}
+		m_is_cb = true;
+		m_PC += inc_pc;
+		return cycles;
+	} 
+
+	inc_pc = CYCLE_TABLE_DEBUG[m_opcode].len;
+	cycles = CYCLE_TABLE_DEBUG[m_opcode].cycles;
 
 	// TODO - add the things we need to make decoding instructions easier
 	m_r1 = static_cast<RegisterName8Bit>((m_opcode >> 3) & 0x7);
@@ -138,6 +141,11 @@ int Cpu::decode() {
 
 // Return any extra cycles taken due to memory read/writes
 int Cpu::execute() {
+	if (m_is_cb) {
+		m_is_cb = false;
+		// handle 0xcb prefix
+		return 0;
+	}
 	switch (m_opcode) {
 	case 0: { return 0;  }
 	/*-------------------- Load Instructions 8/16 bit --------------------*/
@@ -174,7 +182,8 @@ int Cpu::execute() {
 		break;
 	}
 	// LD (HL), R
-	case 0x70: case 0x71: case 0x72: case 0x73: case 0x74: case 0x75: case 0x77:
+	case 0x70: case 0x71: case 0x72: 
+	case 0x73: case 0x74: case 0x75: case 0x77:
 	{
 		m_bus->write_byte(read_word(HL), read_byte(m_r2));
 		break;
@@ -206,6 +215,154 @@ int Cpu::execute() {
 		opcode_push(AF);
 		break;
 	}
+	/*-------------------- Control flow Instructions ------------------*/
+	// Call
+	case 0xCD:
+	{
+		opcode_call(imm_u16);
+		break;
+	}
+	// Call NZ, u16
+	case 0xC4:
+	{
+		if (!m_flags.Z) {
+			opcode_call(imm_u16);
+			return 12;
+		}
+		break;
+	}
+	// Call NC, u16
+	case 0xD4:
+	{
+		if (!m_flags.C) {
+			opcode_call(imm_u16);
+			return 12;
+		}
+		break;
+	}
+	// Call Z, u16
+	case 0xCC:
+	{
+		if (m_flags.Z) {
+			opcode_call(imm_u16);
+			return 12;
+		}
+		break;
+	}
+	// Call C, u16
+	case 0xDC:
+	{
+		if (m_flags.C) {
+			opcode_call(imm_u16);
+			return 12;
+		}
+		break;
+	}
+	// RET
+	case 0xC9:
+	{
+		opcode_ret();
+		break;
+	}
+	// RETI
+	case 0xD9:
+	{
+		opcode_ret();
+		IME = true;
+		break;
+	}
+	// RET NZ
+	case 0xC0:
+	{
+		if (!m_flags.Z) {
+			opcode_ret();
+			return 12;
+		}
+		break;
+	}
+	// RET NC
+	case 0xD0:
+	{
+		if (!m_flags.C) {
+			opcode_ret();
+			return 12;
+		}
+		break;
+	}
+	// RET Z
+	case 0xC8:
+	{
+		if (m_flags.Z) {
+			opcode_ret();
+			return 12;
+		}
+		break;
+	}
+	// RET C
+	case 0xD8:
+	{
+		if (m_flags.C) {
+			opcode_ret();
+			return 12;
+		}
+		break;
+	}
+	// RST
+	case 0xC7: case 0xD7: case 0xE7: case 0xF7:
+	case 0xCF: case 0xDF: case 0xEF: case 0xFF:
+	{
+		static uint16_t RST_ADDR[8] = {0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38};
+		opcode_call((m_opcode >> 3) & 7);
+		break;
+	}
+	// JP u16
+	case 0xC3:
+	{
+		m_PC = imm_u16;
+		break;
+	}
+	// JP NZ, u16
+	case 0xC2:
+	{
+		if (!m_flags.Z) {
+			m_PC = imm_u16;
+			return 4;
+		}
+		break;
+	}
+	// JP NC, u16
+	case 0xD2:
+	{
+		if (!m_flags.C) {
+			m_PC = imm_u16;
+			return 4;
+		}
+		break;
+	}
+	// JP Z, u16
+	case 0xCA:
+	{
+		if (m_flags.Z) {
+			m_PC = imm_u16;
+			return 4;
+		}
+		break;
+	}
+	// JP C, u16
+	case 0xDA:
+	{
+		if (m_flags.C) {
+			m_PC = imm_u16;
+			return 4;
+		}
+		break;
+	}
+	// JP HL
+	case 0xE9:
+	{
+		m_PC = read_word(HL);
+		break;
+	}
 	/*-------------------- Arithmetic Instructions --------------------*/
 	default: Unimplemented_Opcode(m_opcode);
 	}
@@ -225,6 +382,10 @@ void Cpu::opcode_pop(RegisterName16Bit reg) {
 }
 
 void Cpu::opcode_call(uint16_t addr) {
-	opcode_push(static_cast<RegisterName16Bit>(m_PC));
+	opcode_push(PC);
 	m_PC = addr;
+}
+
+void Cpu::opcode_ret() {
+	opcode_pop(PC);
 }

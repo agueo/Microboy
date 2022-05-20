@@ -11,9 +11,6 @@ struct Opcode {
 	uint8_t cycles_extra;
 };
 
-enum class OPCODE_CB {
-};
-
 static const Opcode CYCLE_TABLE_DEBUG[0x100] = {
 	{"NOP","control/misc","----",1,4,4}, {"LD BC,u16","x16/lsm","----",3,12,12}, {"LD (BC),A","x8/lsm","----",1,8,8}, {"INC BC","x16/alu","----",1,8,8}, {"INC B","x8/alu","Z0H-",1,4,4}, {"DEC B","x8/alu","Z1H-",1,4,4}, {"LD B,u8","x8/lsm","----",2,8,8}, {"RLCA","x8/rsb","000C",1,4,4}, {"LD (u16),SP","x16/lsm","----",3,20,20}, {"ADD HL,BC","x16/alu","-0HC",1,8,8}, {"LD A,(BC)","x8/lsm","----",1,8,8}, {"DEC BC","x16/alu","----",1,8,8}, {"INC C","x8/alu","Z0H-",1,4,4}, {"DEC C","x8/alu","Z1H-",1,4,4}, {"LD C,u8","x8/lsm","----",2,8,8}, {"RRCA","x8/rsb","000C",1,4,4},
 	{"STOP","control/misc","----",2,4,4}, {"LD DE,u16","x16/lsm","----",3,12,12}, {"LD (DE),A","x8/lsm","----",1,8,8}, {"INC DE","x16/alu","----",1,8,8}, {"INC D","x8/alu","Z0H-",1,4,4}, {"DEC D","x8/alu","Z1H-",1,4,4}, {"LD D,u8","x8/lsm","----",2,8,8}, {"RLA","x8/rsb","000C",1,4,4}, {"JR i8","control/br","----",2,12,12}, {"ADD HL,DE","x16/alu","-0HC",1,8,8}, {"LD A,(DE)","x8/lsm","----",1,8,8}, {"DEC DE","x16/alu","----",1,8,8}, {"INC E","x8/alu","Z0H-",1,4,4}, {"DEC E","x8/alu","Z1H-",1,4,4}, {"LD E,u8","x8/lsm","----",2,8,8}, {"RRA","x8/rsb","000C",1,4,4},
@@ -32,6 +29,7 @@ static const Opcode CYCLE_TABLE_DEBUG[0x100] = {
 	{"LD (FF00+u8),A","x8/lsm","----",2,12,12}, {"POP HL","x16/lsm","----",1,12,12}, {"LD (FF00+C),A","x8/lsm","----",1,8,8}, {"UNUSED","unused","----",1,0,0}, {"UNUSED","unused","----",1,0,0}, {"PUSH HL","x16/lsm","----",1,16,16}, {"AND A,u8","x8/alu","Z010",2,8,8}, {"RST 20h","control/br","----",1,16,16}, {"ADD SP,i8","x16/alu","00HC",2,16,16}, {"JP HL","control/br","----",1,4,4}, {"LD (u16),A","x8/lsm","----",3,16,16}, {"UNUSED","unused","----",1,0,0}, {"UNUSED","unused","----",1,0,0}, {"UNUSED","unused","----",1,0,0}, {"XOR A,u8","x8/alu","Z000",2,8,8}, {"RST 28h","control/br","----",1,16,16},
 	{"LD A,(FF00+u8)","x8/lsm","----",2,12,12}, {"POP AF","x16/lsm","ZNHC",1,12,12}, {"LD A,(FF00+C)","x8/lsm","----",1,8,8}, {"DI","control/misc","----",1,4,4}, {"UNUSED","unused","----",1,0,0}, {"PUSH AF","x16/lsm","----",1,16,16}, {"OR A,u8","x8/alu","Z000",2,8,8}, {"RST 30h","control/br","----",1,16,16}, {"LD HL,SP+i8","x16/alu","00HC",2,12,12}, {"LD SP,HL","x16/lsm","----",1,8,8}, {"LD A,(u16)","x8/lsm","----",3,16,16}, {"EI","control/misc","----",1,4,4}, {"UNUSED","unused","----",1,0,0}, {"UNUSED","unused","----",1,0,0}, {"CP A,u8","x8/alu","Z1HC",2,8,8}, {"RST 38h","control/br","----",1,16,16},
 };
+
 
 static const Opcode CYCLE_TABLE_DEBUG_CB[0x100] = {
 	{"RLC B","x8/rsb","Z00C",2,8,8}, {"RLC C","x8/rsb","Z00C",2,8,8}, {"RLC D","x8/rsb","Z00C",2,8,8}, {"RLC E","x8/rsb","Z00C",2,8,8}, {"RLC H","x8/rsb","Z00C",2,8,8}, {"RLC L","x8/rsb","Z00C",2,8,8}, {"RLC (HL)","x8/rsb","Z00C",2,16,16}, {"RLC A","x8/rsb","Z00C",2,8,8}, {"RRC B","x8/rsb","Z00C",2,8,8}, {"RRC C","x8/rsb","Z00C",2,8,8}, {"RRC D","x8/rsb","Z00C",2,8,8}, {"RRC E","x8/rsb","Z00C",2,8,8}, {"RRC H","x8/rsb","Z00C",2,8,8}, {"RRC L","x8/rsb","Z00C",2,8,8}, {"RRC (HL)","x8/rsb","Z00C",2,16,16}, {"RRC A","x8/rsb","Z00C",2,8,8},

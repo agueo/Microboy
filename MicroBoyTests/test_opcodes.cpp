@@ -1,5 +1,6 @@
 #include "pch.h"
 #include <memory>
+#include <iostream>
 
 #include "../Microboy/Cartridge.h"
 #include "../Microboy/Cpu.h"
@@ -238,10 +239,168 @@ TEST_F(TestOpcodes, TestOpcodes_push_pop) {
 	}
 }
 
-TEST_F(TestOpcodes, TestOpcode_call) {
-	EXPECT_EQ(0, 1);
+TEST_F(TestOpcodes, TestOpcode_call_ret) {
+	// test rom
+	std::vector<uint8_t> rom_data { 
+		// call then ret but put the ret at the place the call was expected in ram
+		0xCD, 0x00, 0xC0, 0x00, 0x00, 0x00
+	};
+	auto cart = std::make_unique<Mbc0>(rom_data);
+	bus->load_cart(std::move(cart));
+	bus->write_byte(WRAM_BASE, 0xC9);
+
+	cpu.reset();
+	cpu.write_word(PC, 0);
+
+	struct expected {
+		uint16_t SP_addr;
+		uint16_t PC_addr;
+		int cycles_taken;
+	};
+
+	std::vector<expected> expected_state{
+		{HRAM_END-2, WRAM_BASE, 24}, {HRAM_END, 0x03, 16}
+	};
+
+	int cycles = 0;
+	// Check push 
+	for (auto &exp : expected_state) {
+		cycles = cpu.step(1);
+		ASSERT_EQ(cycles, exp.cycles_taken);
+		ASSERT_EQ(cpu.read_word(SP), exp.SP_addr);
+		ASSERT_EQ(cpu.read_word(PC), exp.PC_addr);
+	}
 }
 
-TEST_F(TestOpcodes, TestOpcode_ret) {
-	EXPECT_EQ(0, 1);
+TEST_F(TestOpcodes, TestOpcode_call_ret_n_cond) {
+	// test rom
+	std::vector<uint8_t> rom_data { 
+		// testing call NZ, ret NZ, call NC, RET NC
+		0xC4, 0x00, 0xC0, 0xD4, 0x01, 0xC0, 0x00, 0x00, 0x00
+	};
+	auto cart = std::make_unique<Mbc0>(rom_data);
+	bus->load_cart(std::move(cart));
+	bus->write_byte(WRAM_BASE, 0xC0);
+	bus->write_byte(WRAM_BASE+1, 0xD0);
+	cpu.write_byte(F, 0x00); // f = ZNHC
+
+	cpu.reset();
+	cpu.write_word(PC, 0);
+
+	struct expected {
+		uint16_t SP_addr;
+		uint16_t PC_addr;
+		int cycles_taken;
+	};
+
+	std::vector<expected> expected_state{
+		{HRAM_END-2, WRAM_BASE, 24}, {HRAM_END, 0x03, 20},
+		{HRAM_END-2, WRAM_BASE+1, 24}, {HRAM_END, 0x06, 20}
+	};
+
+	int cycles = 0;
+	// Check push 
+	for (auto &exp : expected_state) {
+		cycles = cpu.step(1);
+		ASSERT_EQ(cycles, exp.cycles_taken);
+		ASSERT_EQ(cpu.read_word(SP), exp.SP_addr);
+		ASSERT_EQ(cpu.read_word(PC), exp.PC_addr);
+	}
+}
+
+TEST_F(TestOpcodes, TestOpcode_call_ret_cond) {
+	// test rom
+	cpu.reset();
+	std::vector<uint8_t> rom_data { 
+		// testing call NZ, ret NZ, call NC, RET NC
+		0xCC, 0x00, 0xC0, 0xDC, 0x01, 0xC0, 0x00, 0x00, 0x00
+	};
+	auto cart = std::make_unique<Mbc0>(rom_data);
+	bus->load_cart(std::move(cart));
+	bus->write_byte(WRAM_BASE, 0xC8);
+	bus->write_byte(WRAM_BASE+1, 0xD8);
+	// set bits Z and C
+	cpu.write_byte(F, 0b10010000); // f = CHNZ
+	cpu.write_word(PC, 0);
+
+	struct expected {
+		uint16_t SP_addr;
+		uint16_t PC_addr;
+		int cycles_taken;
+	};
+
+	std::vector<expected> expected_state{
+		{HRAM_END-2, WRAM_BASE, 24}, {HRAM_END, 0x03, 20},
+		{HRAM_END-2, WRAM_BASE+1, 24}, {HRAM_END, 0x06, 20}
+	};
+
+	int cycles = 0;
+	// Check push 
+	for (auto &exp : expected_state) {
+		cycles = cpu.step(1);
+		ASSERT_EQ(cycles, exp.cycles_taken);
+		ASSERT_EQ(cpu.read_word(SP), exp.SP_addr);
+		ASSERT_EQ(cpu.read_word(PC), exp.PC_addr);
+	}
+}
+
+TEST_F(TestOpcodes, TestOpcode_jp_cond) {
+	// test rom
+	cpu.reset();
+	std::vector<uint8_t> rom_data { 
+		// testing jp, jp Z, jp C with positive conditionals
+		0xC3, 0x03, 0x00, 0xCA, 0x06, 0x00, 0xDA, 0x09, 0x00, 0x00 , 0x00, 0x00, 0x00 , 0x00	
+	};
+	auto cart = std::make_unique<Mbc0>(rom_data);
+	bus->load_cart(std::move(cart));
+	// set bits Z and C
+	cpu.write_byte(F, 0b10010000);
+	cpu.write_word(PC, 0);
+
+	struct expected {
+		uint16_t PC_addr;
+		int cycles_taken;
+	};
+
+	std::vector<expected> expected_state{
+		{0x03, 16}, {0x06, 16}, {0x09, 16},
+	};
+
+	int cycles = 0;
+	// Check push 
+	for (auto &exp : expected_state) {
+		cycles = cpu.step(1);
+		ASSERT_EQ(cycles, exp.cycles_taken);
+		ASSERT_EQ(cpu.read_word(PC), exp.PC_addr);
+	}
+}
+
+TEST_F(TestOpcodes, TestOpcode_jp_n_cond) {
+	// test rom
+	cpu.reset();
+	std::vector<uint8_t> rom_data { 
+		// testing jp, jp Z, jp C with positive conditionals
+		0xC2, 0x03, 0x00, 0xD2, 0x06, 0x00, 0x00, 0x00
+	};
+	auto cart = std::make_unique<Mbc0>(rom_data);
+	bus->load_cart(std::move(cart));
+	// don't set bits Z and C
+	cpu.write_word(PC, 0);
+
+	struct expected {
+		uint16_t PC_addr;
+		int cycles_taken;
+	};
+
+	std::vector<expected> expected_state{
+		{0x3, 16}, {0x06, 16},
+	};
+
+	int cycles = 0;
+	// Check push 
+	for (auto &exp : expected_state) {
+		cycles = cpu.step(1);
+		ASSERT_EQ(cycles, exp.cycles_taken);
+		ASSERT_EQ(cpu.read_word(PC), exp.PC_addr);
+	}
 }

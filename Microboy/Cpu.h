@@ -52,6 +52,7 @@ private:
 	void opcode_push(RegisterName16Bit reg);
 	void opcode_pop(RegisterName16Bit reg);
 	void opcode_call(uint16_t addr);
+	void opcode_ret();
 
 	//--------------------
 	// Data members
@@ -63,6 +64,7 @@ private:
 
 	// Create an instruction class that holds everything it needs to execute
 	uint8_t m_opcode;
+	bool m_is_cb;
 	// useful things for executing instructions
 	// TODO look through all the instructions and glean out the common ones
 	// TODO - which registers 8 bit src and dest
