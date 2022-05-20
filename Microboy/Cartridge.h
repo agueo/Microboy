@@ -23,9 +23,6 @@ public:
 
 	virtual uint8_t read_byte(uint16_t addr) = 0;
 	virtual void write_byte(uint16_t addr, uint8_t value) = 0;
-
-protected:
-	std::string rom_name;
 };
 
 std::unique_ptr<Cartridge> system_load_rom(const std::string &filename);

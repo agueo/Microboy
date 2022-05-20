@@ -190,3 +190,58 @@ TEST_F(TestOpcodes, TestOpcode_ld_m_hl_r) {
 		}
 	}
 }
+
+TEST_F(TestOpcodes, TestOpcodes_push_pop) {
+	// test rom
+	std::vector<uint8_t> rom_data { 
+		// push values
+		0xC5, 0xD5, 0xE5, 0xF5,
+		// pop values
+		0xC1, 0xD1, 0xE1, 0xF1, 0x00, 0x00
+	};
+	auto cart = std::make_unique<Mbc0>(rom_data);
+	bus->load_cart(std::move(cart));
+
+	cpu.reset();
+	cpu.write_word(PC, 0);
+
+	struct expected {
+		uint16_t SP_addr;
+		uint16_t value_expected;
+		int cycles_taken;
+		RegisterName16Bit reg;
+	};
+
+	std::vector<expected> expected_state_push{
+		{0xFFFC, 0x0100, 16}, {0xFFFA, 0x13D8, 16}, {0xFFF8, 0x014D, 16}, {0xFFF6, 0x100, 16}
+	};
+
+	std::vector<expected> expected_state_pop {
+		{0xFFF8, 0x0100, 12, BC}, {0xFFFA, 0x014D, 12, DE}, {0xFFFC, 0x13D8, 12, HL}, {0xFFFE, 0x100, 12, AF}
+	};
+	
+	int cycles = 0;
+	// Check push 
+	for (auto &exp : expected_state_push) {
+		cycles = cpu.step(1);
+		ASSERT_EQ(cycles, exp.cycles_taken);
+		ASSERT_EQ(cpu.read_word(SP), exp.SP_addr);
+		ASSERT_EQ(bus->read_word(exp.SP_addr), exp.value_expected);
+	}
+
+	// check pop
+	for (auto &exp : expected_state_pop) {
+		cycles = cpu.step(1);
+		ASSERT_EQ(cycles, exp.cycles_taken);
+		ASSERT_EQ(cpu.read_word(SP), exp.SP_addr);
+		ASSERT_EQ(cpu.read_word(exp.reg), exp.value_expected);
+	}
+}
+
+TEST_F(TestOpcodes, TestOpcode_call) {
+	EXPECT_EQ(0, 1);
+}
+
+TEST_F(TestOpcodes, TestOpcode_ret) {
+	EXPECT_EQ(0, 1);
+}

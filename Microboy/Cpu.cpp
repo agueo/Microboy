@@ -82,12 +82,13 @@ void Cpu::write_byte(RegisterName8Bit reg, uint8_t value) {
 }
 
 uint16_t Cpu::read_word(RegisterName16Bit reg) {
-	if (reg == SP) return m_SP;
 	switch (reg) {
 	case BC: return m_reg[B] << 8 | m_reg[C];
 	case DE: return m_reg[D] << 8 | m_reg[E];
 	case HL: return m_reg[H] << 8 | m_reg[L];
 	case AF: return m_reg[A] << 8 | m_flags.to_byte();
+	case SP: return m_SP;
+	case PC: return m_PC;
 	default: return 0;
 	}
 }
@@ -99,6 +100,8 @@ void Cpu::write_word(RegisterName16Bit reg, uint16_t value) {
 	case DE: { m_reg[D] = (value >> 8) & 0xFF; m_reg[E] = value & 0xFF; return; }
 	case HL: { m_reg[H] = (value >> 8) & 0xFF; m_reg[L] = value & 0xFF; return; }
 	case AF: { m_reg[A] = (value >> 8) & 0xFF; m_flags.from_byte(value & 0xF0); return; }
+	case SP: { m_SP = value; return; }
+	case PC: { m_PC = value; return; }
 	}
 }
 
@@ -176,9 +179,52 @@ int Cpu::execute() {
 		m_bus->write_byte(read_word(HL), read_byte(m_r2));
 		break;
 	}
+	/*-------------------- Stack Instructions -------------------------*/
+	// POP R16
+	case 0xC1: case 0xD1: case 0xE1:
+	{
+		RegisterName16Bit op = static_cast<RegisterName16Bit>((m_opcode >> 4 )& 3);
+		opcode_pop(op);
+		break;
+	}
+	// POP AF
+	case 0xF1:
+	{
+		opcode_pop(AF);
+		break;
+	}
+	// PUSH R16
+	case 0xC5: case 0xD5: case 0xE5:
+	{
+		RegisterName16Bit op = static_cast<RegisterName16Bit>((m_opcode >> 4) & 3);
+		opcode_push(op);
+		break;
+	}
+	// PUSH AF
+	case 0xF5:
+	{
+		opcode_push(AF);
+		break;
+	}
 	/*-------------------- Arithmetic Instructions --------------------*/
 	default: Unimplemented_Opcode(m_opcode);
 	}
 	return 0;
 }
 
+void Cpu::opcode_push(RegisterName16Bit reg) {
+	uint16_t value = read_word(reg);
+	m_SP -= 2;
+	m_bus->write_word(m_SP, value);
+}
+
+void Cpu::opcode_pop(RegisterName16Bit reg) {
+	uint16_t value = m_bus->read_word(m_SP);
+	write_word(reg, value);
+	m_SP += 2;
+}
+
+void Cpu::opcode_call(uint16_t addr) {
+	opcode_push(static_cast<RegisterName16Bit>(m_PC));
+	m_PC = addr;
+}

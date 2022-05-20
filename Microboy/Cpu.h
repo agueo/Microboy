@@ -23,7 +23,7 @@ enum RegisterName8Bit : uint8_t {
 // TODO - When we need to parse the different group types 
 // we may need to overload the read_word and write_word methods
 enum RegisterName16Bit : uint8_t {
-	BC, DE, HL, SP, AF
+	BC, DE, HL, SP, AF, PC
 };
 
 class Cpu {
@@ -41,9 +41,17 @@ public:
 	void write_word(RegisterName16Bit reg, uint16_t value);
 
 private:
+	
+	//--------------------
+	// member functions
+	//--------------------
 	void fetch();
 	int decode();
 	int execute();
+
+	void opcode_push(RegisterName16Bit reg);
+	void opcode_pop(RegisterName16Bit reg);
+	void opcode_call(uint16_t addr);
 
 	//--------------------
 	// Data members

@@ -8,6 +8,7 @@ constexpr int ROM_BASE	= 0x0000;
 constexpr int ROM_END	= 0x7FFF;
 constexpr int VRAM_BASE = 0x8000;
 constexpr int VRAM_END	= 0x9FFF;
+// missing 0xA000-BFFF belongs to external rom
 constexpr int WRAM_BASE = 0xC000;
 constexpr int WRAM_END	= 0xDFFF;
 constexpr int OAM_BASE	= 0xFE00;
