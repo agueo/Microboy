@@ -13,7 +13,6 @@ struct Flag {
 
 	void from_byte(uint8_t byte);
 	uint8_t to_byte();
-	// flag setting operations
 };
 
 enum RegisterName8Bit : uint8_t {
@@ -54,6 +53,11 @@ private:
 	void opcode_call(uint16_t addr);
 	void opcode_ret();
 
+	// flag setting operations
+	void set_flag_c(bool set);
+	void set_flag_h(bool set);
+	void set_flag_z(bool set);
+	void set_flag_n(bool set);
 	//--------------------
 	// Data members
 	//--------------------

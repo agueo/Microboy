@@ -26,6 +26,9 @@ protected:
 	std::shared_ptr<MemoryBus> bus{nullptr};
 };
 
+/*--------------------------------------------------*/
+/* Test Load Instructions							*/
+/*--------------------------------------------------*/
 TEST_F(TestOpcodes, TestOpcode_ld_r_r) {
 	// test rom
 	std::vector<uint8_t> rom_data { 
@@ -238,7 +241,13 @@ TEST_F(TestOpcodes, TestOpcode_ld_m_hl_r) {
 
 	// test rom
 	std::vector<uint8_t> rom_data { 
-		0x70, 0x71, 0x72, 0x73, 0x77, 0x74, 0x75, 0x22, 0x32, 0x00, 0x00
+		// LD (HL), r
+		0x70, 0x71, 0x72, 0x73, 0x77, 0x74, 0x75, 
+		// LD (HL+/-), A
+		0x22, 0x32, 
+		// LD (HL), u8
+		0x36, 0x55,
+		0x00, 0x00, 0x00
 	};
 	auto cart = std::make_unique<Mbc0>(rom_data);
 	bus->load_cart(std::move(cart));
@@ -251,7 +260,7 @@ TEST_F(TestOpcodes, TestOpcode_ld_m_hl_r) {
 	// tables driven testing
 	std::vector<expected> expected_state {
 		{WRAM_BASE, 0x12, 8}, {WRAM_BASE, 0x34, 8}, {WRAM_BASE, 0x56, 8}, {WRAM_BASE, 0x78, 8}, {WRAM_BASE, 0x90, 8}, {WRAM_BASE, 0xC0, 8}, {WRAM_BASE, 0x00, 8}, 
-		{WRAM_BASE, 0x90, 8}, {WRAM_BASE + 1, 0x90, 8}
+		{WRAM_BASE, 0x90, 8}, {WRAM_BASE + 1, 0x90, 8}, {WRAM_BASE, 0x55, 12}
 	};
 
 	for (const auto & exp : expected_state) {
@@ -265,6 +274,121 @@ TEST_F(TestOpcodes, TestOpcode_ld_m_hl_r) {
 	}
 }
 
+TEST_F(TestOpcodes, TestOpcode_ld_IO_a) {
+	// Test istructions
+	// LD A, (0xFF00 + u8)
+	// LD (0xFF00 + u8), A
+	// LD A, (0xFF00 + C)
+	// LD (0xFF00 + C), A
+	cpu.write_byte(C, 0x04);
+	bus->write_byte(IO_BASE, 0xAB);
+	cpu.write_word(PC, 0);
+
+	// test rom
+	std::vector<uint8_t> rom_data { 
+		0xF0, 0x00, 0xE0, 0x00, 0xF2, 0xE2, 0x00, 0x00
+	};
+	auto cart = std::make_unique<Mbc0>(rom_data);
+	bus->load_cart(std::move(cart));
+
+	// expected state structure
+	struct expected {
+		uint16_t addr;
+		uint8_t value_expected;
+		uint8_t A_value_expected;
+		int cycles_taken;
+	};
+	// tables driven testing
+	std::vector<expected> expected_state {
+		{IO_BASE, 0xAB, 0xAB, 12}, {IO_BASE, 0xAB, 0xAB, 12},
+		{IO_BASE+4, 0x00, 0x00, 8}, {IO_BASE+4, 0x00, 0x00, 8}
+	};
+	
+	for (const auto & exp : expected_state) {
+		auto cycles_taken = cpu.step(1);
+		ASSERT_EQ(cycles_taken, exp.cycles_taken);
+		ASSERT_EQ(bus->read_byte(exp.addr), exp.value_expected);
+		ASSERT_EQ(cpu.read_byte(A), exp.A_value_expected);
+	}
+}
+
+TEST_F(TestOpcodes, TestOpcode_ld_hl_sp_i8) {
+	// LD HL, SP + i8
+	cpu.write_word(PC, 0);
+	cpu.write_word(SP, 0xC000);
+	bus->write_word(0xC000+18, 0xDEAD);
+	bus->write_word(0xC100, 0xBEEF);
+	// test rom
+	std::vector<uint8_t> rom_data { 
+		0xf8, 0x12, // LD HL, SP + i8	// test h carry
+		0x31, 0xFF, 0xC0, // LD SP, u8	// setup sp to test carry overflow
+		0xf8, 0x01, // LD HL, SP + i8	// test carry
+		0x00, 0x00, 0x00
+	};
+	auto cart = std::make_unique<Mbc0>(rom_data);
+	bus->load_cart(std::move(cart));
+
+	// expected state structure
+	struct expected {
+		uint16_t HL_value_expected;
+		uint8_t flag_value_expected;
+		int cycles_taken;
+	};
+	// tables driven testing
+	std::vector<expected> expected_state {
+		{0xDEAD, 0b0010'0000, 12},
+		{0xDEAD, 0b0010'0000, 12},
+		{0xBEEF, 0b0001'0000, 12}
+	};
+	
+	for (const auto & exp : expected_state) {
+		auto cycles_taken = cpu.step(1);
+		ASSERT_EQ(cycles_taken, exp.cycles_taken);
+		ASSERT_EQ(cpu.read_word(HL), exp.HL_value_expected);
+		ASSERT_EQ(cpu.read_byte(F), exp.flag_value_expected);
+	}
+}
+
+TEST_F(TestOpcodes, TestOpcode_ld_m_u16_sp) {
+	// LD (u16), SP
+	cpu.reset();
+	cpu.write_word(PC, 0);
+	bus->write_word(0xC000+18, 0xDEAD);
+	bus->write_word(0xC100, 0xBEEF);
+	// test rom
+	std::vector<uint8_t> rom_data { 
+		0xf8, 0x12, // LD HL, SP + i8	// test h carry
+		0x31, 0xFF, 0xC0, // LD SP, u8	// setup sp to test carry overflow
+		0xf8, 0x01, // LD HL, SP + i8	// test carry
+		0x00, 0x00, 0x00
+	};
+	auto cart = std::make_unique<Mbc0>(rom_data);
+	bus->load_cart(std::move(cart));
+
+	// expected state structure
+	struct expected {
+		uint16_t HL_value_expected;
+		uint8_t flag_value_expected;
+		int cycles_taken;
+	};
+	// tables driven testing
+	std::vector<expected> expected_state {
+		{0xDEAD, 0b0010'0000, 12},
+		{0xDEAD, 0b0010'0000, 12},
+		{0xBEEF, 0b0001'0000, 12}
+	};
+	
+	for (const auto & exp : expected_state) {
+		auto cycles_taken = cpu.step(1);
+		ASSERT_EQ(cycles_taken, exp.cycles_taken);
+		ASSERT_EQ(cpu.read_word(HL), exp.HL_value_expected);
+		ASSERT_EQ(cpu.read_byte(F), exp.flag_value_expected);
+	}
+}
+
+/*--------------------------------------------------*/
+/* Test Stack Instructions							*/
+/*--------------------------------------------------*/
 TEST_F(TestOpcodes, TestOpcodes_push_pop) {
 	// test rom
 	std::vector<uint8_t> rom_data { 
@@ -312,6 +436,9 @@ TEST_F(TestOpcodes, TestOpcodes_push_pop) {
 	}
 }
 
+/*--------------------------------------------------*/
+/* Test Control Flow Instructions					*/
+/*--------------------------------------------------*/
 TEST_F(TestOpcodes, TestOpcode_call_ret) {
 	// test rom
 	std::vector<uint8_t> rom_data { 
@@ -483,3 +610,7 @@ TEST_F(TestOpcodes, TestOpcode_jp_n_cond) {
 		ASSERT_EQ(cpu.read_word(PC), exp.PC_addr);
 	}
 }
+
+/*--------------------------------------------------*/
+/* Test Arithmetic Instructions						*/
+/*--------------------------------------------------*/

@@ -22,6 +22,20 @@ uint8_t Flag::to_byte() {
 	return byte;
 }
 
+bool calc_8_bit_carry(uint8_t byte1, uint8_t byte2) {
+	uint16_t val = byte1 + byte2;
+	//fmt::print("val1: {:#02x} + val2: {:#02x} = {:#02x}\n", byte1, byte2, val);
+	if (val > (val & 0xFF))	return true;
+	else					return false;
+}
+
+bool calc_8_bit_hcarry(uint8_t byte1, uint8_t byte2) {
+	uint8_t val = byte1 + byte2;
+	//fmt::print("val1: {:#02x} + val2: {:#02x} = {:#02x}\n", byte1, byte2, val & 0x10);
+	if ((val & 0x10) > (byte1 & 0x0F) + (byte2 & 0x0f)) return true;
+	else												return false;
+}
+
 //-----------------------------------------------------
 // Cpu Methods
 //-----------------------------------------------------
@@ -52,6 +66,39 @@ void Cpu::reset() {
 	m_reg[A] = 0x01;
 	m_PC = 0x100;
 	m_SP = 0xFFFE;
+}
+
+// flag setting operations
+void Cpu::set_flag_c(bool set) {
+	if (set) {
+		m_flags.C = 1; 
+		return;
+	}
+	m_flags.C = 0;
+}
+
+void Cpu::set_flag_h(bool set) {
+	if (set) {
+		m_flags.H = 1; 
+		return;
+	}
+	m_flags.H = 0;
+}
+
+void Cpu::set_flag_z(bool set) {
+	if (set) {
+		m_flags.Z = 1; 
+		return;
+	}
+	m_flags.Z = 0;
+}
+
+void Cpu::set_flag_n(bool set) {
+	if (set) {
+		m_flags.N = 1; 
+		return;
+	}
+	m_flags.N = 0;
 }
 
 //--------------------------------------------------
@@ -124,7 +171,7 @@ int Cpu::decode() {
 		m_is_cb = true;
 		m_PC += inc_pc;
 		return cycles;
-	} 
+	}
 
 	inc_pc = CYCLE_TABLE_DEBUG[m_opcode].len;
 	cycles = CYCLE_TABLE_DEBUG[m_opcode].cycles;
@@ -132,7 +179,8 @@ int Cpu::decode() {
 	// TODO - add the things we need to make decoding instructions easier
 	m_r1 = static_cast<RegisterName8Bit>((m_opcode >> 3) & 0x7);
 	m_r2 = static_cast<RegisterName8Bit>(m_opcode & 0x7);
-	m_r16 = static_cast<RegisterName16Bit>((m_opcode >> 4) & 7); // will only work for BC, DE, HL, SP NOTE: AF and HL will need to be handled separately
+	// will only work for BC, DE, HL, SP NOTE: AF and HL will need to be handled separately
+	m_r16 = static_cast<RegisterName16Bit>((m_opcode >> 4) & 7);
 	imm_u8 = m_bus->read_byte(m_PC + 1);
 	imm_u16 = m_bus->read_word(m_PC + 1);
 
@@ -170,35 +218,33 @@ int Cpu::execute() {
 		write_byte(m_r1, imm_u8);
 		break;
 	}
+	// LD (HL), u8
+	case 0x36:
+	{
+		m_bus->write_byte(read_word(HL), imm_u8);
+		break;
+	}
 	// LD R, u16
 	case 0x01: case 0x11: case 0x21: case 0x31:
 	{
 		write_word(m_r16, imm_u16);
 		break;
 	}
-	// LD (u16), SP
-	case 0x08:
-	{
-		m_bus->write_word(imm_u16, read_word(SP));
-		break;
-	}
 	// LD (BC, DE), A - Note: (BC, DE)
 	case 0x02: case 0x12:
 	{
 		m_bus->write_byte(
-			read_word(static_cast<RegisterName16Bit>((m_opcode >> 4) & 0xFF)), 
-			read_byte(A));
+			read_word(m_r16),
+			read_byte(A)
+		);
 		break;
 	}
 	// LD (HL+), A
 	// LD (HL-), A
-	case 0x22: case 0x32: 
+	case 0x22: case 0x32:
 	{
 		uint16_t hl = read_word(HL);
-		m_bus->write_byte(
-			hl,	
-			read_byte(A)
-		);
+		m_bus->write_byte(hl, read_byte(A));
 		if (m_opcode == 0x22) { write_word(HL, hl + 1); }
 		else if (m_opcode == 0x32) { write_word(HL, hl - 1); }
 		break;
@@ -209,7 +255,7 @@ int Cpu::execute() {
 		write_byte(
 			A,
 			m_bus->read_byte(
-				read_word(static_cast<RegisterName16Bit>((m_opcode >> 4) & 0xFF))
+				read_word(m_r16)
 			));
 		break;
 	}
@@ -234,13 +280,72 @@ int Cpu::execute() {
 		break;
 	}
 	// LD (HL), R
-	case 0x70: case 0x71: case 0x72: 
+	case 0x70: case 0x71: case 0x72:
 	case 0x73: case 0x74: case 0x75: case 0x77:
 	{
 		m_bus->write_byte(read_word(HL), read_byte(m_r2));
 		break;
 	}
-	// LD
+	// LD (0xFF00 + u8), A
+	case 0xE0:
+	{
+		m_bus->write_byte(IO_BASE + imm_u8, read_byte(A));
+		break;
+	}
+	// LD A, (0xFF00 + u8)
+	case 0xF0: 
+	{
+		write_byte(A, m_bus->read_byte(IO_BASE + imm_u8));
+		break;
+	}
+	// LD (0xFF00 + C), A
+	case 0xE2:
+	{
+		m_bus->write_byte(IO_BASE + read_byte(C), read_byte(A));
+		break;
+	}
+	// LD A, (0xFF00 + C)
+	case 0xF2:
+	{
+		write_byte(A, m_bus->read_byte(IO_BASE + read_byte(C)));
+		break;
+	}
+	// LD (u16), A
+	case 0xEA:
+	{
+		m_bus->write_byte(imm_u16, read_byte(A));
+		break;
+	}
+	// LD A, (u16)
+	case 0xFA:
+	{
+		write_byte(A, m_bus->read_byte(imm_u8));
+		break;
+	}
+	// LD HL, SP + i8
+	case 0xF8:
+	{
+		write_word(HL, m_bus->read_word(m_SP + (int8_t)imm_u8));
+		// Update Flags for add
+		// TODO - Refactor
+		set_flag_c(calc_8_bit_carry(m_SP, (int8_t)imm_u8));
+		set_flag_h(calc_8_bit_hcarry(m_SP, (int8_t)imm_u8));
+		m_flags.Z = 0;
+		m_flags.N = 0;
+		break;
+	}
+	// LD (u16), SP
+	case 0x08:
+	{
+		m_bus->write_word(imm_u16, m_SP);
+		break;
+	}
+	// LD (SP), HL
+	case 0xF9: 
+	{
+		write_word(SP, read_word(HL));
+		break;
+	}
 	/*-------------------- Stack Instructions -------------------------*/
 	// POP R16
 	case 0xC1: case 0xD1: case 0xE1:
@@ -368,7 +473,7 @@ int Cpu::execute() {
 		opcode_call((m_opcode >> 3) & 7);
 		break;
 	}
-	// JP i8  TODO - Verify validity 
+	// JP i8
 	case 0x18:
 	{
 		m_PC += (int8_t)imm_u8;
@@ -408,6 +513,7 @@ int Cpu::execute() {
 			m_PC += (int8_t)imm_u8;
 			return 4;
 		}
+		break;
 	}
 	// JP u16
 	case 0xC3:
@@ -459,7 +565,7 @@ int Cpu::execute() {
 	}
 	/*-------------------- Special Instructions --------------------*/
 	// HALT
-	case 0x76: 
+	case 0x76:
 	{
 		m_halted = true;
 		break;
