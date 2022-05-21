@@ -1,7 +1,5 @@
 #include "pch.h"
 #include <memory>
-#include <iostream>
-
 #include "../Microboy/Cartridge.h"
 #include "../Microboy/Cpu.h"
 #include "../Microboy/Mbc0.h"
@@ -349,7 +347,9 @@ TEST_F(TestOpcodes, TestOpcode_jp_cond) {
 	cpu.reset();
 	std::vector<uint8_t> rom_data { 
 		// testing jp, jp Z, jp C with positive conditionals
-		0xC3, 0x03, 0x00, 0xCA, 0x06, 0x00, 0xDA, 0x09, 0x00, 0x00 , 0x00, 0x00, 0x00 , 0x00	
+		0xC3, 0x03, 0x00, 0xCA, 0x06, 0x00, 0xDA, 0x09, 0x00,
+		// jp Z i8
+		0x28, 0x02, 0x00, 0x00, 0x38, 0x01, 0x00 , 0x18, (uint8_t)-3, 0x00
 	};
 	auto cart = std::make_unique<Mbc0>(rom_data);
 	bus->load_cart(std::move(cart));
@@ -364,6 +364,7 @@ TEST_F(TestOpcodes, TestOpcode_jp_cond) {
 
 	std::vector<expected> expected_state{
 		{0x03, 16}, {0x06, 16}, {0x09, 16},
+		{0x0D, 12}, {0x10, 12}, {0x0F, 12},
 	};
 
 	int cycles = 0;
@@ -374,6 +375,7 @@ TEST_F(TestOpcodes, TestOpcode_jp_cond) {
 		ASSERT_EQ(cpu.read_word(PC), exp.PC_addr);
 	}
 }
+
 
 TEST_F(TestOpcodes, TestOpcode_jp_n_cond) {
 	// test rom

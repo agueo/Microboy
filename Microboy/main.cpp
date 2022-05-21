@@ -42,7 +42,6 @@ int main(int, char **) {
 	cpu.connect_bus(bus);
 	cpu.read_byte(B);
 
-	
 	// control flags
 	bool running{ true };
 	bool rom_loaded{ false };

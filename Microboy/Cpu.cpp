@@ -1,4 +1,5 @@
 #include <fmt/core.h>
+
 #include "Cpu.h"
 #include "Opcode.h"
 
@@ -107,6 +108,7 @@ void Cpu::write_word(RegisterName16Bit reg, uint16_t value) {
 
 inline void Cpu::fetch() {
 	m_opcode = m_bus->read_byte(m_PC);
+	fmt::print("Opcode: {:#02x}: {}\n", m_opcode, CYCLE_TABLE_DEBUG[m_opcode].name);
 }
 
 int Cpu::decode() {
@@ -116,6 +118,7 @@ int Cpu::decode() {
 	if (m_opcode == 0xcb) {
 		++m_PC;
 		m_opcode = m_bus->read_byte(m_PC);
+		fmt::print("0xCB prefixed {:#02x}: {}\n", m_opcode, CYCLE_TABLE_DEBUG_CB[m_opcode].name);
 		inc_pc = CYCLE_TABLE_DEBUG_CB[m_opcode].len;
 		cycles = CYCLE_TABLE_DEBUG_CB[m_opcode].cycles;
 		m_is_cb = true;
@@ -314,6 +317,47 @@ int Cpu::execute() {
 		static uint16_t RST_ADDR[8] = {0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38};
 		opcode_call((m_opcode >> 3) & 7);
 		break;
+	}
+	// JP i8  TODO - Verify validity 
+	case 0x18:
+	{
+		m_PC += (int8_t)imm_u8;
+		break;
+	}
+	// JP NZ, i8
+	case 0x20:
+	{
+		if (!m_flags.Z) {
+			m_PC += (int8_t)imm_u8;
+			return 4;
+		}
+		break;
+	}
+	// JP Z, i8
+	case 0x28:
+	{
+		if (m_flags.Z) {
+			m_PC += (int8_t)imm_u8;
+			return 4;
+		}
+		break;
+	}
+	// JP NC, i8
+	case 0x30:
+	{
+		if (!m_flags.C) {
+			m_PC += (int8_t)imm_u8;
+			return 4;
+		}
+		break;
+	}
+	// JP C, i8
+	case 0x38:
+	{
+		if (m_flags.C) {
+			m_PC += (int8_t)imm_u8;
+			return 4;
+		}
 	}
 	// JP u16
 	case 0xC3:
