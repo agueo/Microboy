@@ -22,14 +22,14 @@ uint8_t Flag::to_byte() {
 	return byte;
 }
 
-bool calc_8_bit_carry(uint8_t byte1, uint8_t byte2) {
+inline bool calc_8_bit_carry(uint8_t byte1, uint8_t byte2) {
 	uint16_t val = byte1 + byte2;
 	//fmt::print("val1: {:#02x} + val2: {:#02x} = {:#02x}\n", byte1, byte2, val);
 	if (val > (val & 0xFF))	return true;
 	else					return false;
 }
 
-bool calc_8_bit_hcarry(uint8_t byte1, uint8_t byte2) {
+inline bool calc_8_bit_hcarry(uint8_t byte1, uint8_t byte2) {
 	uint8_t val = byte1 + byte2;
 	//fmt::print("val1: {:#02x} + val2: {:#02x} = {:#02x}\n", byte1, byte2, val & 0x10);
 	if ((val & 0x10) > (byte1 & 0x0F) + (byte2 & 0x0f)) return true;
@@ -71,7 +71,7 @@ void Cpu::reset() {
 // flag setting operations
 void Cpu::set_flag_c(bool set) {
 	if (set) {
-		m_flags.C = 1; 
+		m_flags.C = 1;
 		return;
 	}
 	m_flags.C = 0;
@@ -79,7 +79,7 @@ void Cpu::set_flag_c(bool set) {
 
 void Cpu::set_flag_h(bool set) {
 	if (set) {
-		m_flags.H = 1; 
+		m_flags.H = 1;
 		return;
 	}
 	m_flags.H = 0;
@@ -87,7 +87,7 @@ void Cpu::set_flag_h(bool set) {
 
 void Cpu::set_flag_z(bool set) {
 	if (set) {
-		m_flags.Z = 1; 
+		m_flags.Z = 1;
 		return;
 	}
 	m_flags.Z = 0;
@@ -95,7 +95,7 @@ void Cpu::set_flag_z(bool set) {
 
 void Cpu::set_flag_n(bool set) {
 	if (set) {
-		m_flags.N = 1; 
+		m_flags.N = 1;
 		return;
 	}
 	m_flags.N = 0;
@@ -293,7 +293,7 @@ int Cpu::execute() {
 		break;
 	}
 	// LD A, (0xFF00 + u8)
-	case 0xF0: 
+	case 0xF0:
 	{
 		write_byte(A, m_bus->read_byte(IO_BASE + imm_u8));
 		break;
@@ -341,7 +341,7 @@ int Cpu::execute() {
 		break;
 	}
 	// LD (SP), HL
-	case 0xF9: 
+	case 0xF9:
 	{
 		write_word(SP, read_word(HL));
 		break;
@@ -571,6 +571,33 @@ int Cpu::execute() {
 		break;
 	}
 	/*-------------------- Arithmetic Instructions --------------------*/
+	// XOR A, R
+	case 0xA8: case 0xA9: case 0xAA: case 0xAB: case 0xAC: case 0xAD: case 0xAF:
+	{
+		uint8_t xor_a_r = read_byte(A) ^ read_byte(m_r2);
+		write_byte(A, xor_a_r);
+		m_flags.from_byte(0);
+		m_flags.Z = xor_a_r == 0 ? 1 : 0;
+		break;
+	}
+	// XOR A, (HL)
+	case 0xAE:
+	{
+		uint8_t xor_a_m = read_byte(A) ^ m_bus->read_byte(read_word(HL));
+		write_byte(A, xor_a_m);
+		m_flags.from_byte(0);
+		m_flags.Z = xor_a_m == 0 ? 1 : 0;
+		break;
+	}
+	// XOR A, u8
+	case 0xEE:
+	{
+		uint8_t xor_a_u8 = read_byte(A) ^ imm_u8;
+		write_byte(A, xor_a_u8);
+		m_flags.from_byte(0);
+		m_flags.Z = xor_a_u8 == 0 ? 1 : 0;
+		break;
+	}
 	default: Unimplemented_Opcode(m_opcode);
 	}
 	return 0;
