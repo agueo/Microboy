@@ -577,6 +577,41 @@ TEST_F(TestOpcodes, TestOpcode_jp_n_cond) {
 /*--------------------------------------------------*/
 /* Test Arithmetic Instructions						*/
 /*--------------------------------------------------*/
+TEST_F(TestOpcodes, TestOpcode_and_a) {
+	// test rom
+	cpu.write_word(BC, 0x1111);
+	cpu.write_word(DE, 0x1111);
+	cpu.write_word(HL, 0xC000);
+	cpu.write_word(AF, 0x1100);
+	cpu.write_word(PC, 0);
+	std::vector<uint8_t> rom_data {
+		0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA7,
+		0xA6, 0xE6, 0x00, 0x00, 0x00, 0x00
+	};
+	auto cart = std::make_unique<Mbc0>(rom_data);
+	bus->load_cart(std::move(cart));
+	// expected state structure
+	struct expected {
+		RegisterName8Bit r;
+		uint8_t value_expected;
+		uint8_t flags_expected;
+		int cycles_taken;
+	};
+	// tables driven testing
+	std::vector<expected> expected_state {
+		{A, 0x11, 0, 4}, {A, 0x11, 0x0, 4}, {A, 0x11, 0, 4}, {A, 0x11, 0, 4}, {A, 0x0, 0b1000'0000 , 4}, {A, 0, 0b1000'0000, 4}, {A, 0x00, 0b1000'0000, 4},
+		{A, 0x0, 0b1000'0000, 8}, {A, 0x0, 0b1000'0000, 8},
+	};
+
+	// run the test for all ld r, r opcodes
+	for (const auto & exp : expected_state) {
+		auto cycles_taken = cpu.step(1);
+		ASSERT_EQ(cycles_taken, exp.cycles_taken);
+		ASSERT_EQ(cpu.read_byte(exp.r), exp.value_expected);
+		ASSERT_EQ(cpu.read_byte(F), exp.flags_expected);
+	}
+}
+
 TEST_F(TestOpcodes, TestOpcode_xor_a) {
 	// test rom
 	cpu.write_word(BC, 0x1111);

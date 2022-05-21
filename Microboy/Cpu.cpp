@@ -571,6 +571,33 @@ int Cpu::execute() {
 		break;
 	}
 	/*-------------------- Arithmetic Instructions --------------------*/
+	// AND A, R
+	case 0xA0: case 0xA1: case 0xA2: case 0xA3: case 0xA4: case 0xA5: case 0xA7:
+	{
+		uint8_t and_a_r = read_byte(A) & read_byte(m_r2);
+		write_byte(A, and_a_r);
+		m_flags.from_byte(0);
+		m_flags.Z = and_a_r == 0 ? 1 : 0;
+		break;
+	}
+	// AND A, (HL)
+	case 0xA6:
+	{
+		uint8_t and_a_m = read_byte(A) & m_bus->read_byte(read_word(HL));
+		write_byte(A, and_a_m);
+		m_flags.from_byte(0);
+		m_flags.Z = and_a_m == 0 ? 1 : 0;
+		break;
+	}
+	// AND A, u8
+	case 0xE6:
+	{
+		uint8_t and_a_u8 = read_byte(A) & imm_u8;
+		write_byte(A, and_a_u8);
+		m_flags.from_byte(0);
+		m_flags.Z = and_a_u8 == 0 ? 1 : 0;
+		break;
+	}
 	// XOR A, R
 	case 0xA8: case 0xA9: case 0xAA: case 0xAB: case 0xAC: case 0xAD: case 0xAF:
 	{
