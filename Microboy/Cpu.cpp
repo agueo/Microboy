@@ -176,6 +176,55 @@ int Cpu::execute() {
 		write_word(m_r16, imm_u16);
 		break;
 	}
+	// LD (u16), SP
+	case 0x08:
+	{
+		m_bus->write_word(imm_u16, read_word(SP));
+		break;
+	}
+	// LD (BC, DE), A - Note: (BC, DE)
+	case 0x02: case 0x12:
+	{
+		m_bus->write_byte(
+			read_word(static_cast<RegisterName16Bit>((m_opcode >> 4) & 0xFF)), 
+			read_byte(A));
+		break;
+	}
+	// LD (HL+), A
+	// LD (HL-), A
+	case 0x22: case 0x32: 
+	{
+		uint16_t hl = read_word(HL);
+		m_bus->write_byte(
+			hl,	
+			read_byte(A)
+		);
+		if (m_opcode == 0x22) { write_word(HL, hl + 1); }
+		else if (m_opcode == 0x32) { write_word(HL, hl - 1); }
+		break;
+	}
+	// LD A, (BC, DE)
+	case 0x0A: case 0x1A:
+	{
+		write_byte(
+			A,
+			m_bus->read_byte(
+				read_word(static_cast<RegisterName16Bit>((m_opcode >> 4) & 0xFF))
+			));
+		break;
+	}
+	// LD A, (HL+)
+	case 0x2A: case 0x3A:
+	{
+		uint16_t hl = read_word(HL);
+		write_byte(
+			A,
+			m_bus->read_byte(HL)
+		);
+		if (m_opcode == 0x2a) { write_word(HL, hl + 1); }
+		else if (m_opcode == 0x3a) { write_word(HL, hl - 1); }
+		break;
+	}
 	// LD R, (HL)
 	case 0x46: case 0x56: case 0x66:
 	case 0x4E: case 0x5E: case 0x6E: case 0x7E:
@@ -191,6 +240,7 @@ int Cpu::execute() {
 		m_bus->write_byte(read_word(HL), read_byte(m_r2));
 		break;
 	}
+	// LD
 	/*-------------------- Stack Instructions -------------------------*/
 	// POP R16
 	case 0xC1: case 0xD1: case 0xE1:
@@ -405,6 +455,13 @@ int Cpu::execute() {
 	case 0xE9:
 	{
 		m_PC = read_word(HL);
+		break;
+	}
+	/*-------------------- Special Instructions --------------------*/
+	// HALT
+	case 0x76: 
+	{
+		m_halted = true;
 		break;
 	}
 	/*-------------------- Arithmetic Instructions --------------------*/

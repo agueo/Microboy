@@ -123,6 +123,80 @@ TEST_F(TestOpcodes, TestOpcode_ld_r_u16) {
 	}
 }
 
+TEST_F(TestOpcodes, TestOpcode_ld_m_r16_a) {
+	cpu.reset();
+	// Test LD (BC,DE), A
+	// also test LD (u16), SP
+	cpu.write_word(BC, WRAM_BASE);
+	cpu.write_word(DE, WRAM_BASE+2);
+	cpu.write_word(AF, 0x9000);
+	cpu.write_word(PC, 0x0000);
+
+	// test rom
+	std::vector<uint8_t> rom_data { 
+		0x02, 0x12, 0x08, 0x04, 0xc0, 0x00, 0x00
+	};
+
+	auto cart = std::make_unique<Mbc0>(rom_data);
+	bus->load_cart(std::move(cart));
+
+	// expected state structure
+	struct expected {
+		uint16_t addr;
+		uint8_t value_expected;
+		int cycles_taken;
+	};
+
+	// tables driven testing
+	std::vector<expected> expected_state {
+		{WRAM_BASE, 0x90, 8}, {WRAM_BASE+2, 0x90, 8}, {WRAM_BASE + 4, 0xFE, 20}
+	};
+
+	for (const auto & exp : expected_state) {
+		auto cycles_taken = cpu.step(1);
+		ASSERT_EQ(cycles_taken, exp.cycles_taken);
+		ASSERT_EQ(bus->read_byte(exp.addr), exp.value_expected);
+	}
+}
+
+TEST_F(TestOpcodes, TestOpcodes_TestOpcode_ld_a_m_r16)
+{
+	cpu.reset();
+	// Test LD A, (BC,DE)
+	cpu.write_word(BC, WRAM_BASE);
+	cpu.write_word(DE, WRAM_BASE+2);
+	bus->write_word(WRAM_BASE, 0x12);
+	bus->write_word(WRAM_BASE+2, 0x34);
+	cpu.write_word(AF, 0x9000);
+	cpu.write_word(PC, 0x0000);
+
+	// test rom
+	std::vector<uint8_t> rom_data { 
+		0x0A, 0x1A, 0x00, 0x00
+	};
+
+	auto cart = std::make_unique<Mbc0>(rom_data);
+	bus->load_cart(std::move(cart));
+
+	// expected state structure
+	struct expected {
+		uint16_t addr;
+		uint8_t value_expected;
+		int cycles_taken;
+	};
+
+	// tables driven testing
+	std::vector<expected> expected_state {
+		{WRAM_BASE, 0x12, 8}, {WRAM_BASE+2, 0x34, 8},
+	};
+
+	for (const auto & exp : expected_state) {
+		auto cycles_taken = cpu.step(1);
+		ASSERT_EQ(cycles_taken, exp.cycles_taken);
+		ASSERT_EQ(bus->read_byte(exp.addr), exp.value_expected);
+	}
+}
+
 TEST_F(TestOpcodes, TestOpcode_ld_r_m_hl) {
 	// Test LD R, (HL)
 	// setup some data where HL is pointing. Lets use WRAM addresses
@@ -164,7 +238,7 @@ TEST_F(TestOpcodes, TestOpcode_ld_m_hl_r) {
 
 	// test rom
 	std::vector<uint8_t> rom_data { 
-		0x70, 0x71, 0x72, 0x73, 0x77, 0x74, 0x75, 0x00, 0x00
+		0x70, 0x71, 0x72, 0x73, 0x77, 0x74, 0x75, 0x22, 0x32, 0x00, 0x00
 	};
 	auto cart = std::make_unique<Mbc0>(rom_data);
 	bus->load_cart(std::move(cart));
@@ -177,6 +251,7 @@ TEST_F(TestOpcodes, TestOpcode_ld_m_hl_r) {
 	// tables driven testing
 	std::vector<expected> expected_state {
 		{WRAM_BASE, 0x12, 8}, {WRAM_BASE, 0x34, 8}, {WRAM_BASE, 0x56, 8}, {WRAM_BASE, 0x78, 8}, {WRAM_BASE, 0x90, 8}, {WRAM_BASE, 0xC0, 8}, {WRAM_BASE, 0x00, 8}, 
+		{WRAM_BASE, 0x90, 8}, {WRAM_BASE + 1, 0x90, 8}
 	};
 
 	for (const auto & exp : expected_state) {
@@ -349,7 +424,7 @@ TEST_F(TestOpcodes, TestOpcode_jp_cond) {
 		// testing jp, jp Z, jp C with positive conditionals
 		0xC3, 0x03, 0x00, 0xCA, 0x06, 0x00, 0xDA, 0x09, 0x00,
 		// jp Z i8
-		0x28, 0x02, 0x00, 0x00, 0x38, 0x01, 0x00 , 0x18, (uint8_t)-3, 0x00
+		0x28, 0x02, 0x00, 0x00, 0x38, 0x01, 0x20 , 0x18, (uint8_t)-3, 0x00
 	};
 	auto cart = std::make_unique<Mbc0>(rom_data);
 	bus->load_cart(std::move(cart));
@@ -365,6 +440,8 @@ TEST_F(TestOpcodes, TestOpcode_jp_cond) {
 	std::vector<expected> expected_state{
 		{0x03, 16}, {0x06, 16}, {0x09, 16},
 		{0x0D, 12}, {0x10, 12}, {0x0F, 12},
+		// case where we jp NZ should not take branch checking correct offset and cycles
+		{0x11, 8}
 	};
 
 	int cycles = 0;
