@@ -587,7 +587,7 @@ TEST_F(TestOpcodes, TestOpcode_add_a) {
 	cpu.write_word(PC, 0);
 	bus->write_byte(0xC000, 8);
 	std::vector<uint8_t> rom_data {
-		0x80, 0x82, 0x82, 0x83, 0x84, 0x85, 0x87, // ADD A, r
+		0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x87, // ADD A, r
 		0x86, 0xC6, 0x00, 0x00, 0x00, 0x00		  // ADD A, (HL), OR A, u8
 	};
 	auto cart = std::make_unique<Mbc0>(rom_data);
@@ -658,6 +658,87 @@ TEST_F(TestOpcodes, TestOpcode_adc_a) {
 	}
 }
 
+TEST_F(TestOpcodes, TestOpcode_sub_a) {
+	// test rom
+	cpu.write_word(BC, 0x1111);
+	cpu.write_word(DE, 0x1111);
+	cpu.write_word(HL, 0xC000);
+	cpu.write_word(AF, 0x0000);
+	cpu.write_word(PC, 0);
+	bus->write_byte(0xC000, 8);
+	std::vector<uint8_t> rom_data {
+		0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x97, // SUB A, r
+		0x96, 0xD6, 0x00, 0x00, 0x00, 0x00		  // SUB A, (HL), OR A, u8
+	};
+	auto cart = std::make_unique<Mbc0>(rom_data);
+	bus->load_cart(std::move(cart));
+	// expected state structure
+	struct expected {
+		RegisterName8Bit r;
+		uint8_t value_expected;
+		uint8_t flags_expected;
+		int cycles_taken;
+	};
+	// tables driven testing
+	std::vector<expected> expected_state {
+		//B							C						   D						  E
+		{A, 0xEF, 0b0111'0000, 4}, {A, 0xDE, 0b0100'0000, 4}, {A, 0xCD, 0b0100'0000, 4}, {A, 0xBC, 0b0100'0000, 4},
+		//H							L						   A						  E
+		{A, 0xFC, 0b0101'0000, 4}, {A, 0xFC, 0b0100'0000, 4}, {A, 0x00, 0b1100'0000, 4},
+		// (HL)						u8
+		{A, 0xF8, 0b0111'0000, 8}, {A, 0xF8, 0b0100'0000, 8},
+	};
+
+	// run the test for all ld r, r opcodes
+	for (const auto & exp : expected_state) {
+		auto cycles_taken = cpu.step(1);
+		ASSERT_EQ(cycles_taken, exp.cycles_taken);
+		ASSERT_EQ(cpu.read_byte(exp.r), exp.value_expected);
+		ASSERT_EQ(cpu.read_byte(F), exp.flags_expected);
+	}
+}
+
+TEST_F(TestOpcodes, TestOpcode_sdc_a) {
+	// test romdi{
+	cpu.write_word(BC, 0x1111);
+	cpu.write_word(DE, 0x1111);
+	cpu.write_word(HL, 0xC000);
+	cpu.write_word(AF, 0x0000);
+	cpu.write_word(PC, 0);
+	bus->write_byte(0xC000, 8);
+	std::vector<uint8_t> rom_data {
+		0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9F, // SDC A, r
+		0x9E, 0xDE, 0x00, 0x00, 0x00, 0x00		  // SDC A, (HL), OR A, u8
+	};
+	auto cart = std::make_unique<Mbc0>(rom_data);
+	bus->load_cart(std::move(cart));
+	// expected state structure
+	struct expected {
+		RegisterName8Bit r;
+		uint8_t value_expected;
+		uint8_t flags_expected;
+		int cycles_taken;
+	};
+	// tables driven testing
+	std::vector<expected> expected_state {
+		//B							C						   D						  E
+		{A, 0xEF, 0b0111'0000, 4}, {A, 0xDD, 0b0100'0000, 4}, {A, 0xCC, 0b0100'0000, 4}, {A, 0xBB, 0b0100'0000, 4},
+		//H							L						   A						  E
+		{A, 0xFB, 0b0101'0000, 4}, {A, 0xFA, 0b0100'0000, 4}, {A, 0x00, 0b1100'0000, 4},
+		// (HL)						u8
+		{A, 0xF8, 0b0111'0000, 8}, {A, 0xF7, 0b0100'0000, 8},
+	};
+
+	// run the test for all ld r, r opcodes
+	for (const auto & exp : expected_state) {
+		auto cycles_taken = cpu.step(1);
+		ASSERT_EQ(cycles_taken, exp.cycles_taken);
+		ASSERT_EQ(cpu.read_byte(exp.r), exp.value_expected);
+		ASSERT_EQ(cpu.read_byte(F), exp.flags_expected);
+	}
+}
+
+
 TEST_F(TestOpcodes, TestOpcode_and_a) {
 	// test rom
 	cpu.write_word(BC, 0x1111);
@@ -680,7 +761,7 @@ TEST_F(TestOpcodes, TestOpcode_and_a) {
 	};
 	// tables driven testing
 	std::vector<expected> expected_state {
-		{A, 0x11, 0b0010'0000, 4}, {A, 0x11, 0b0010'0000, 4}, {A, 0x11, 0b0010'0000, 4}, {A, 0x11, 0b0010'0000, 4}, 
+		{A, 0x11, 0b0010'0000, 4}, {A, 0x11, 0b0010'0000, 4}, {A, 0x11, 0b0010'0000, 4}, {A, 0x11, 0b0010'0000, 4},
 		{A, 0x0, 0b1010'0000 , 4}, {A, 0, 0b1010'0000, 4}, {A, 0x00, 0b1010'0000, 4},
 		{A, 0x0, 0b1010'0000, 8}, {A, 0x0, 0b1010'0000, 8},
 	};

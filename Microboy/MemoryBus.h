@@ -12,7 +12,7 @@ constexpr int VRAM_END	= 0x9FFF;
 constexpr int WRAM_BASE = 0xC000;
 constexpr int WRAM_END	= 0xDFFF;
 constexpr int OAM_BASE	= 0xFE00;
-constexpr int OAM_END	= 0xFE9F; // belongs to PPU? 
+constexpr int OAM_END	= 0xFE9F; // belongs to PPU?
 constexpr int IO_BASE	= 0xFF00;
 constexpr int IO_END	= 0xFF7F;
 constexpr int HRAM_BASE = 0xFF80;
@@ -32,7 +32,7 @@ public:
 	uint16_t read_word(uint16_t addr);
 	void write_byte(uint16_t addr, uint8_t value);
 	void write_word(uint16_t addr, uint16_t value);
-	
+
 
 private:
 	std::array<uint8_t, 0x2000> vram; // this will belong to the ppu

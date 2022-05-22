@@ -19,7 +19,7 @@ enum RegisterName8Bit : uint8_t {
 	B, C, D, E, H, L, F, A
 };
 
-// TODO - When we need to parse the different group types 
+// TODO - When we need to parse the different group types
 // we may need to overload the read_word and write_word methods
 enum RegisterName16Bit : uint8_t {
 	BC, DE, HL, SP, AF, PC
@@ -32,7 +32,7 @@ public:
 	void reset();
 	// void clock(); // maybe needed
 	bool is_halted() { return m_halted; }
-	
+
 	// read and write functions for registers
 	uint8_t read_byte(RegisterName8Bit reg);
 	void write_byte(RegisterName8Bit reg, uint8_t value);
@@ -40,7 +40,7 @@ public:
 	void write_word(RegisterName16Bit reg, uint16_t value);
 
 private:
-	
+
 	//--------------------
 	// member functions
 	//--------------------
@@ -54,6 +54,8 @@ private:
 	void opcode_ret();
 	void opcode_add(uint8_t a, uint8_t b);
 	void opcode_adc(uint8_t a, uint8_t b);
+	void opcode_sub(uint8_t a, uint8_t b);
+	void opcode_sbc(uint8_t a, uint8_t b);
 	void opcode_and(uint8_t a);
 	void opcode_xor(uint8_t a);
 	void opcode_or(uint8_t a);

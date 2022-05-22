@@ -30,12 +30,12 @@ inline bool calc_8_bit_hcarry(uint8_t byte1, uint8_t byte2, uint8_t carry=0) {
 	return ((((byte1 & 0x0F) + (byte2 & 0x0F) + (carry & 0x0f)) & 0x10) == 0x10);
 }
 
-inline bool calc_8_bit_borrow(uint8_t byte1, uint8_t byte2) {
-	return (byte2 > byte1);
+inline bool calc_8_bit_borrow(uint8_t byte1, uint8_t byte2, uint8_t carry=0) {
+	return ((byte2 + carry) > byte1);
 }
 
-inline bool calc_8_bit_hborrow(uint8_t byte1, uint8_t byte2) {
-	return ((((byte1 & 0x0F) - (byte2 & 0x0F)) & 0x10) == 0x10);
+inline bool calc_8_bit_hborrow(uint8_t byte1, uint8_t byte2, uint8_t carry= 0) {
+	return ((((byte1 & 0x0F) - (byte2 & 0x0F) - (carry & 0x0F)) & 0x10) == 0x10);
 }
 
 //-----------------------------------------------------
@@ -580,7 +580,7 @@ int Cpu::execute() {
 		break;
 	}
 	// ADD A, (HL)
-	case 0x86: 
+	case 0x86:
 	{
 		opcode_add(read_byte(A),  m_bus->read_byte(read_word(HL)));
 		break;
@@ -598,7 +598,7 @@ int Cpu::execute() {
 		break;
 	}
 	// ADC A, (HL)
-	case 0x8E: 
+	case 0x8E:
 	{
 		opcode_adc(read_byte(A), m_bus->read_byte(read_word(HL)));
 		break;
@@ -607,6 +607,39 @@ int Cpu::execute() {
 	case 0xCE:
 	{
 		opcode_adc(read_byte(A), imm_u8);
+		break;
+	}
+	// SUB A, R
+	case 0x90: case 0x91: case 0x92: case 0x93: case 0x94: case 0x95: case 0x97:
+	{
+		opcode_sub(read_byte(A), read_byte(m_r2));
+		break;
+	}
+	// SUB A, (HL)
+	case 0x96:
+	{
+		opcode_sub(read_byte(A), m_bus->read_byte(read_word(HL)));
+		break;
+	}
+	// SUB A, u8
+	case 0xD6:
+	{
+		opcode_sub(read_byte(A), imm_u8);
+		break;
+	}
+	case 0x98: case 0x99: case 0x9A: case 0x9B: case 0x9C: case 0x9D: case 0x9F:
+	{
+		opcode_sbc(read_byte(A), read_byte(m_r2));
+		break;
+	}
+	case 0x9E:
+	{
+		opcode_sbc(read_byte(A), m_bus->read_byte(read_word(HL)));
+		break;
+	}
+	case 0xDE:
+	{
+		opcode_sbc(read_byte(A), imm_u8);
 		break;
 	}
 	// AND A, R
@@ -636,46 +669,31 @@ int Cpu::execute() {
 	// XOR A, (HL)
 	case 0xAE:
 	{
-		uint8_t xor_a_m = read_byte(A) ^ m_bus->read_byte(read_word(HL));
-		write_byte(A, xor_a_m);
-		m_flags.from_byte(0);
-		m_flags.Z = xor_a_m == 0 ? 1 : 0;
+		opcode_xor(read_byte(A) ^ m_bus->read_byte(read_word(HL)));
 		break;
 	}
 	// XOR A, u8
 	case 0xEE:
 	{
-		uint8_t xor_a_u8 = read_byte(A) ^ imm_u8;
-		write_byte(A, xor_a_u8);
-		m_flags.from_byte(0);
-		m_flags.Z = xor_a_u8 == 0 ? 1 : 0;
+		opcode_xor(read_byte(A) ^ imm_u8);
 		break;
 	}
 	// OR A, r
-	case 0xB0: case 0xB1: case 0xB2: case 0xB3: case 0xB4: case 0xB5: case 0xB7: 
+	case 0xB0: case 0xB1: case 0xB2: case 0xB3: case 0xB4: case 0xB5: case 0xB7:
 	{
-		uint8_t or_a_r = read_byte(A) | read_byte(m_r2);
-		write_byte(A, or_a_r);
-		m_flags.from_byte(0);
-		m_flags.Z = or_a_r == 0 ? 1 : 0;
+		opcode_or(read_byte(A) | read_byte(m_r2));
 		break;
 	}
 	// OR A, (HL)
 	case 0xB6:
 	{
-		uint8_t or_a_m = read_byte(A) | m_bus->read_byte(read_word(HL));
-		write_byte(A, or_a_m);
-		m_flags.from_byte(0);
-		m_flags.Z = or_a_m == 0 ? 1 : 0;
+		opcode_or(read_byte(A) | m_bus->read_byte(read_word(HL)));
 		break;
 	}
 	// OR A, u8
 	case 0xF6:
 	{
-		uint8_t or_a_u8 = read_byte(A) | imm_u8;
-		write_byte(A, or_a_u8);
-		m_flags.from_byte(0);
-		m_flags.Z = or_a_u8 == 0 ? 1 : 0;
+		opcode_or(read_byte(A) | imm_u8);
 		break;
 	}
 	// CP A, r
@@ -726,7 +744,7 @@ void Cpu::opcode_ret() {
 void Cpu::opcode_add(uint8_t a, uint8_t b) {
 	uint8_t add_a_r = a + b;
 	write_byte(A, add_a_r);
-	m_flags.Z = add_a_r == 0 ? 1 : 0;
+	set_flag_z(add_a_r == 0);
 	m_flags.N = 0;
 	set_flag_c(calc_8_bit_carry(a, b));
 	set_flag_h(calc_8_bit_hcarry(a, b));
@@ -735,34 +753,50 @@ void Cpu::opcode_add(uint8_t a, uint8_t b) {
 void Cpu::opcode_adc(uint8_t a, uint8_t b) {
 	uint8_t add_a_r = a + b + m_flags.C;
 	write_byte(A, add_a_r);
-	m_flags.Z = add_a_r == 0 ? 1 : 0;
+	set_flag_z(add_a_r == 0);
 	m_flags.N = 0;
 	set_flag_c(calc_8_bit_carry(a, b, m_flags.C));
 	set_flag_h(calc_8_bit_hcarry(a, b, m_flags.C));
 
 }
+void Cpu::opcode_sub(uint8_t a, uint8_t b) {
+	uint8_t sub_a_r = a - b;
+	write_byte(A, sub_a_r);
+	set_flag_z(sub_a_r == 0);
+	m_flags.N = 1;
+	set_flag_h(calc_8_bit_hborrow(a, b));
+	set_flag_c(calc_8_bit_borrow(a, b));
+}
 
+void Cpu::opcode_sbc(uint8_t a, uint8_t b) {
+	uint8_t sub_a_r = a - b - m_flags.C;
+	write_byte(A, sub_a_r);
+	set_flag_z(sub_a_r == 0);
+	m_flags.N = 1;
+	set_flag_h(calc_8_bit_hborrow(a, b, m_flags.C));
+	set_flag_c(calc_8_bit_borrow(a, b, m_flags.C));
+}
 void Cpu::opcode_and(uint8_t a) {
 	write_byte(A, a);
 	m_flags.from_byte(0);
-	m_flags.Z = a == 0 ? 1 : 0;
+	set_flag_z(a == 0);
 	m_flags.H = 1;
 }
 
 void Cpu::opcode_xor(uint8_t a) {
 	write_byte(A, a);
 	m_flags.from_byte(0);
-	m_flags.Z = a == 0 ? 1 : 0;
+	set_flag_z(a == 0);
 }
 
 void Cpu::opcode_or(uint8_t a) {
 	write_byte(A, a);
 	m_flags.from_byte(0);
-	m_flags.Z = a == 0 ? 1 : 0;
+	set_flag_z(a == 0);
 }
 
 void Cpu::opcode_cp(uint8_t a, uint8_t b) {
-	m_flags.Z = a - b == 0 ? 1 : 0;
+	set_flag_z(a - b == 0);
 	m_flags.N = 1;
 	set_flag_c(calc_8_bit_borrow(a, b));
 	set_flag_h(calc_8_bit_hborrow(a, b));
