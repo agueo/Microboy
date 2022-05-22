@@ -577,7 +577,104 @@ TEST_F(TestOpcodes, TestOpcode_jp_n_cond) {
 /*--------------------------------------------------*/
 /* Test Arithmetic Instructions						*/
 /*--------------------------------------------------*/
+TEST_F(TestOpcodes, TestOpcode_inc_dec_r) {
+	cpu.write_word(BC, 0x00FF);
+	cpu.write_word(DE, 0xFFFF);
+	cpu.write_word(HL, 0xC000);
+	cpu.write_word(AF, 0xDE00);
+	cpu.write_word(PC, 0);
+	bus->write_byte(0xC000, 8);
+	std::vector<uint8_t> rom_data{
+	0x04, 0x14, 0x24, 0x0C, 0x1C, 0x2C, 0x3C,
+	0x05, 0x15, 0x25, 0x0D, 0x1D, 0x2D, 0x3D,
+	0x34, 0x35,
+	0x00, 0x00
+	};
+	auto cart = std::make_unique<Mbc0>(rom_data);
+	bus->load_cart(std::move(cart));
+	struct expected {
+		RegisterName8Bit r;
+		uint8_t value_expected;
+		uint8_t flag_expected;
+		int cycles_taken;
+	};
 
+	std::vector<expected> expected_state {
+		// INC r 
+		{B, 0x01, 0b0000'0000, 4}, {D, 0x00, 0b1010'0000, 4}, {H, 0xC1, 0b0000'0000, 4}, {C, 0x00, 0b1010'0000, 4},
+		{E, 0x00, 0b1010'0000, 4}, {L, 0x01, 0b0000'0000, 4}, {A, 0xDF, 0b0000'0000, 4},
+		// DEC r
+		{B, 0x00, 0b1100'0000, 4}, {D, 0xFF, 0b0110'0000, 4}, {H, 0xC0, 0b0100'0000, 4}, {C, 0xFF, 0b0110'0000, 4},
+		{E, 0xFF, 0b0110'0000, 4}, {L, 0x00, 0b1100'0000, 4}, {A, 0xDE, 0b0100'0000, 4},
+	};
+
+	for (const auto& exp : expected_state) {
+		auto cycles_taken = cpu.step(1);
+		ASSERT_EQ(cycles_taken, exp.cycles_taken);
+		ASSERT_EQ(cpu.read_byte(exp.r), exp.value_expected);
+		ASSERT_EQ(cpu.read_byte(F), exp.flag_expected);
+	}
+}
+
+TEST_F(TestOpcodes, TestOpcode_inc_dec_m_hl) {
+	cpu.write_word(HL, WRAM_BASE);
+	cpu.write_word(PC, 0);
+	bus->write_byte(WRAM_BASE, 0xFF);
+	std::vector<uint8_t> rom_data{
+	0x34, 0x35,
+	0x00, 0x00
+	};
+	auto cart = std::make_unique<Mbc0>(rom_data);
+	bus->load_cart(std::move(cart));
+	struct expected {
+		uint8_t value_expected;
+		uint8_t flag_expected;
+		int cycles_taken;
+	};
+
+	std::vector<expected> expected_state {
+		// INC the DEC
+		{0x00, 0b1010'0000, 12}, {0xFF, 0b0110'0000, 12}
+	};
+
+	for (const auto& exp : expected_state) {
+		auto cycles_taken = cpu.step(1);
+		ASSERT_EQ(cycles_taken, exp.cycles_taken);
+		ASSERT_EQ(bus->read_word(WRAM_BASE), exp.value_expected);
+		ASSERT_EQ(cpu.read_byte(F), exp.flag_expected);
+	}
+}
+TEST_F(TestOpcodes, TestOpcode_inc_dec_r16) {
+	cpu.write_word(BC, 0x00FF);
+	cpu.write_word(DE, 0xFFFF);
+	cpu.write_word(HL, 0xC000);
+	cpu.write_word(SP, 0xFFFD);
+	cpu.write_word(PC, 0);
+	bus->write_byte(0xC000, 8);
+	std::vector<uint8_t> rom_data{
+		0x03, 0x13, 0x23, 0x33, 
+		0x0b, 0x1b, 0x2b, 0x3b, 
+		0x00, 0x00
+	};
+	auto cart = std::make_unique<Mbc0>(rom_data);
+	bus->load_cart(std::move(cart));
+	struct expected {
+		RegisterName16Bit r;
+		uint16_t value_expected;
+		int cycles_taken;
+	};
+
+	std::vector<expected> expected_state{
+		{BC, 0x0100, 8}, {DE, 0x0000, 8}, {HL, 0xC001, 8}, {SP, 0xFFFE, 8},
+		{BC, 0x00FF, 8}, {DE, 0xFFFF, 8}, {HL, 0xC000, 8}, {SP, 0xFFFD, 8},
+	};
+
+	for (const auto& exp : expected_state) {
+		auto cycles_taken = cpu.step(1);
+		ASSERT_EQ(cycles_taken, exp.cycles_taken);
+		ASSERT_EQ(cpu.read_word(exp.r), exp.value_expected);
+	}
+}
 TEST_F(TestOpcodes, TestOpcode_add_a) {
 	// test rom
 	cpu.write_word(BC, 0x1111);

@@ -178,15 +178,14 @@ int Cpu::decode() {
 	inc_pc = CYCLE_TABLE_DEBUG[m_opcode].len;
 	cycles = CYCLE_TABLE_DEBUG[m_opcode].cycles;
 
-	// TODO - add the things we need to make decoding instructions easier
+	// Fetched data, registers and immediates to use
 	m_r1 = static_cast<RegisterName8Bit>((m_opcode >> 3) & 0x7);
 	m_r2 = static_cast<RegisterName8Bit>(m_opcode & 0x7);
-	// will only work for BC, DE, HL, SP NOTE: AF and HL will need to be handled separately
 	m_r16 = static_cast<RegisterName16Bit>((m_opcode >> 4) & 7);
 	imm_u8 = m_bus->read_byte(m_PC + 1);
 	imm_u16 = m_bus->read_word(m_PC + 1);
 
-	// Increment the PC to the next instruction // TODO - verify this doesn't cause issues
+	// Increment the PC to the next instruction
 	m_PC += inc_pc;
 
 	return cycles;
@@ -328,10 +327,8 @@ int Cpu::execute() {
 	case 0xF8:
 	{
 		write_word(HL, m_bus->read_word(m_SP + (int8_t)imm_u8));
-		// Update Flags for add
-		// TODO - Refactor
 		set_flag_c(calc_8_bit_carry(m_SP, (int8_t)imm_u8));
-		set_flag_h(calc_8_bit_hcarry(m_SP, (int8_t)imm_u8));
+		set_flag_h(calc_8_bit_hcarry((uint8_t)m_SP, (int8_t)imm_u8));
 		m_flags.Z = 0;
 		m_flags.N = 0;
 		break;
@@ -573,7 +570,61 @@ int Cpu::execute() {
 		break;
 	}
 	/*-------------------- Arithmetic Instructions --------------------*/
-	// ADD A, R // TODO - enhancement refactor into fn
+	// INC R16
+	case 0x03: case 0x13: case 0x23: case 0x33:
+	{
+		write_word(m_r16, read_word(m_r16) + 1);
+		break;
+	}
+	// DEC R16
+	case 0x0B: case 0x1B: case 0x2B: case 0x3B:
+	{
+		write_word(m_r16, read_word(m_r16) - 1);
+		break;
+	}
+	// INC R
+	case 0x04: case 0x14: case 0x24: case 0x0C: case 0x1C: case 0x2C: case 0x3C:
+	{
+		uint8_t r = read_byte(m_r1);
+		write_byte(m_r1, r + 1);
+		set_flag_z((uint8_t)(r + 1) == 0);
+		m_flags.N = 0;
+		set_flag_h(calc_8_bit_hcarry(r, 1));
+		break;
+	}
+	// INC (HL)
+	case 0x34:
+	{
+		uint16_t hl = read_word(HL);
+		uint8_t r = m_bus->read_byte(hl);
+		m_bus->write_byte(hl, r + 1);
+		set_flag_z((uint8_t)(r + 1) == 0);
+		m_flags.N = 0;
+		set_flag_h(calc_8_bit_hcarry(r, 1));
+		break;
+	}
+	// DEC R
+	case 0x05: case 0x15: case 0x25: case 0x0D: case 0x1D: case 0x2D: case 0x3D:
+	{
+		uint8_t r = read_byte(m_r1);
+		write_byte(m_r1, r - 1);
+		set_flag_z((uint8_t)(r - 1) == 0);
+		m_flags.N = 1;
+		set_flag_h(calc_8_bit_hborrow(r, 1));
+		break;
+	}
+	// DEC (HL)
+	case 0x35:
+	{
+		uint16_t hl = read_word(HL);
+		uint8_t r = m_bus->read_byte(hl);
+		m_bus->write_byte(hl, r - 1);
+		set_flag_z((uint8_t)(r - 1) == 0);
+		m_flags.N = 1;
+		set_flag_h(calc_8_bit_hborrow(r, 1));
+		break;
+	}
+	// ADD A, R
 	case 0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x87:
 	{
 		opcode_add(read_byte(A), read_byte(m_r2));
