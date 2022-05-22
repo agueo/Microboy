@@ -23,11 +23,11 @@ uint8_t Flag::to_byte() {
 }
 
 inline bool calc_8_bit_carry(uint16_t byte1, uint16_t byte2, uint8_t carry=0) {
-	return ((((byte1 & 0xFF) + (byte2 & 0xFF)) & 0x100) == 0x100);
+	return ((((byte1 & 0xFF) + (byte2 & 0xFF) + (carry & 0xFF)) & 0x100) == 0x100);
 }
 
 inline bool calc_8_bit_hcarry(uint8_t byte1, uint8_t byte2, uint8_t carry=0) {
-	return ((((byte1 & 0x0F) + (byte2 & 0x0F)) & 0x10) == 0x10);
+	return ((((byte1 & 0x0F) + (byte2 & 0x0F) + (carry & 0x0f)) & 0x10) == 0x10);
 }
 
 inline bool calc_8_bit_borrow(uint8_t byte1, uint8_t byte2) {
@@ -573,43 +573,64 @@ int Cpu::execute() {
 		break;
 	}
 	/*-------------------- Arithmetic Instructions --------------------*/
+	// ADD A, R // TODO - enhancement refactor into fn
+	case 0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x87:
+	{
+		opcode_add(read_byte(A), read_byte(m_r2));
+		break;
+	}
+	// ADD A, (HL)
+	case 0x86: 
+	{
+		opcode_add(read_byte(A),  m_bus->read_byte(read_word(HL)));
+		break;
+	}
+	// ADC A, u8
+	case 0xC6:
+	{
+		opcode_add(read_byte(A), imm_u8);
+		break;
+	}
+	// ADC A, R
+	case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D: case 0x8F:
+	{
+		opcode_adc(read_byte(A), read_byte(m_r2));
+		break;
+	}
+	// ADC A, (HL)
+	case 0x8E: 
+	{
+		opcode_adc(read_byte(A), m_bus->read_byte(read_word(HL)));
+		break;
+	}
+	// ADC A, u8
+	case 0xCE:
+	{
+		opcode_adc(read_byte(A), imm_u8);
+		break;
+	}
 	// AND A, R
 	case 0xA0: case 0xA1: case 0xA2: case 0xA3: case 0xA4: case 0xA5: case 0xA7:
 	{
-		uint8_t and_a_r = read_byte(A) & read_byte(m_r2);
-		write_byte(A, and_a_r);
-		m_flags.from_byte(0);
-		m_flags.Z = and_a_r == 0 ? 1 : 0;
-		m_flags.H = 1;
+		opcode_and(read_byte(A) & read_byte(m_r2));
 		break;
 	}
 	// AND A, (HL)
 	case 0xA6:
 	{
-		uint8_t and_a_m = read_byte(A) & m_bus->read_byte(read_word(HL));
-		write_byte(A, and_a_m);
-		m_flags.from_byte(0);
-		m_flags.Z = and_a_m == 0 ? 1 : 0;
-		m_flags.H = 1;
+		opcode_and(read_byte(A) & m_bus->read_byte(read_word(HL)));
 		break;
 	}
 	// AND A, u8
 	case 0xE6:
 	{
-		uint8_t and_a_u8 = read_byte(A) & imm_u8;
-		write_byte(A, and_a_u8);
-		m_flags.from_byte(0);
-		m_flags.Z = and_a_u8 == 0 ? 1 : 0;
-		m_flags.H = 1;
+		opcode_and(read_byte(A) & imm_u8);
 		break;
 	}
 	// XOR A, R
 	case 0xA8: case 0xA9: case 0xAA: case 0xAB: case 0xAC: case 0xAD: case 0xAF:
 	{
-		uint8_t xor_a_r = read_byte(A) ^ read_byte(m_r2);
-		write_byte(A, xor_a_r);
-		m_flags.from_byte(0);
-		m_flags.Z = xor_a_r == 0 ? 1 : 0;
+		opcode_xor(read_byte(A) ^ read_byte(m_r2));
 		break;
 	}
 	// XOR A, (HL)
@@ -660,33 +681,19 @@ int Cpu::execute() {
 	// CP A, r
 	case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBF:
 	{
-		uint8_t byte1 = read_byte(A);
-		uint8_t byte2 = read_byte(m_r2);
-		m_flags.Z = byte1 - byte2 == 0 ? 1 : 0;
-		m_flags.N = 1;
-		set_flag_c(calc_8_bit_borrow(byte1, byte2));
-		set_flag_h(calc_8_bit_hborrow(byte1, byte2));
+		opcode_cp(read_byte(A), read_byte(m_r2));
 		break;
 	}
 	// CP A, (HL)
 	case 0xBE:
 	{
-		uint8_t byte1 = read_byte(A);
-		uint8_t byte2 = m_bus->read_byte(read_word(HL));
-		m_flags.Z = byte1 - byte2 == 0 ? 1 : 0;
-		m_flags.N = 1;
-		set_flag_h(calc_8_bit_hcarry(byte1, -byte2));
-		set_flag_c(calc_8_bit_borrow(byte1, byte2));
+		opcode_cp(read_byte(A), m_bus->read_byte(read_word(HL)));
 		break;
 	}
 	// CP A, (u8)
 	case 0xFE:
 	{
-		uint8_t byte1 = read_byte(A);
-		m_flags.Z = byte1 - imm_u8 == 0 ? 1 : 0;
-		m_flags.N = 1;
-		set_flag_h(calc_8_bit_hcarry(byte1, -imm_u8));
-		set_flag_c(calc_8_bit_borrow(byte1, imm_u8));
+		opcode_cp(read_byte(A), imm_u8);
 		break;
 	}
 
@@ -714,4 +721,49 @@ void Cpu::opcode_call(uint16_t addr) {
 
 void Cpu::opcode_ret() {
 	opcode_pop(PC);
+}
+
+void Cpu::opcode_add(uint8_t a, uint8_t b) {
+	uint8_t add_a_r = a + b;
+	write_byte(A, add_a_r);
+	m_flags.Z = add_a_r == 0 ? 1 : 0;
+	m_flags.N = 0;
+	set_flag_c(calc_8_bit_carry(a, b));
+	set_flag_h(calc_8_bit_hcarry(a, b));
+}
+
+void Cpu::opcode_adc(uint8_t a, uint8_t b) {
+	uint8_t add_a_r = a + b + m_flags.C;
+	write_byte(A, add_a_r);
+	m_flags.Z = add_a_r == 0 ? 1 : 0;
+	m_flags.N = 0;
+	set_flag_c(calc_8_bit_carry(a, b, m_flags.C));
+	set_flag_h(calc_8_bit_hcarry(a, b, m_flags.C));
+
+}
+
+void Cpu::opcode_and(uint8_t a) {
+	write_byte(A, a);
+	m_flags.from_byte(0);
+	m_flags.Z = a == 0 ? 1 : 0;
+	m_flags.H = 1;
+}
+
+void Cpu::opcode_xor(uint8_t a) {
+	write_byte(A, a);
+	m_flags.from_byte(0);
+	m_flags.Z = a == 0 ? 1 : 0;
+}
+
+void Cpu::opcode_or(uint8_t a) {
+	write_byte(A, a);
+	m_flags.from_byte(0);
+	m_flags.Z = a == 0 ? 1 : 0;
+}
+
+void Cpu::opcode_cp(uint8_t a, uint8_t b) {
+	m_flags.Z = a - b == 0 ? 1 : 0;
+	m_flags.N = 1;
+	set_flag_c(calc_8_bit_borrow(a, b));
+	set_flag_h(calc_8_bit_hborrow(a, b));
 }

@@ -52,6 +52,12 @@ private:
 	void opcode_pop(RegisterName16Bit reg);
 	void opcode_call(uint16_t addr);
 	void opcode_ret();
+	void opcode_add(uint8_t a, uint8_t b);
+	void opcode_adc(uint8_t a, uint8_t b);
+	void opcode_and(uint8_t a);
+	void opcode_xor(uint8_t a);
+	void opcode_or(uint8_t a);
+	void opcode_cp(uint8_t a, uint8_t b);
 
 	// flag setting operations
 	void set_flag_c(bool set);
