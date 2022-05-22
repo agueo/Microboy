@@ -48,6 +48,10 @@ private:
 	int decode();
 	int execute();
 
+	int handle_opcode();
+	int handle_cb_prefix();
+
+	// common Opcodes
 	void opcode_push(RegisterName16Bit reg);
 	void opcode_pop(RegisterName16Bit reg);
 	void opcode_call(uint16_t addr);
@@ -60,6 +64,9 @@ private:
 	void opcode_xor(uint8_t a);
 	void opcode_or(uint8_t a);
 	void opcode_cp(uint8_t a, uint8_t b);
+
+	// interrupt service routine
+	int service_interrupt();
 
 	// flag setting operations
 	void set_flag_c(bool set);
