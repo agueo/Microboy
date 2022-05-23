@@ -807,8 +807,8 @@ int Cpu::handle_opcode() {
 }
 
 int Cpu::handle_cb_prefix() {
-	switch(m_opcode) {
-	// RLC R
+	switch (m_opcode) {
+		// RLC R
 	case 0x00: case 0x01: case 0x02: case 0x03: case 0x04: case 0x05: case 0x07:
 	{
 		uint8_t r = read_byte(m_r2);
@@ -920,7 +920,106 @@ int Cpu::handle_cb_prefix() {
 		m_flags.C = bit0;
 		break;
 	}
-	// 
+	// SLA R - C <- [7 <- 0] <- 0
+	case 0x20: case 0x21: case 0x22: case 0x23: case 0x24: case 0x25: case 0x27:
+	{
+		uint8_t r = read_byte(A);
+		uint8_t bit7 = (r >> 7) & 0x1;
+		r <<= 1;
+		write_byte(m_r2, r);
+		m_flags.from_byte(0);
+		set_flag_z(r == 0);
+		m_flags.C = bit7;
+		break;
+	}
+	// SLA (HL) - C <- [7 <- 0] <- 0
+	case 0x26:
+	{
+		uint16_t hl = read_word(HL);
+		uint8_t r = m_bus->read_byte(hl);
+		uint8_t bit7 = (r >> 7) & 0x1;
+		r <<= 1;
+		m_bus->write_byte(hl, r);
+		m_flags.from_byte(0);
+		set_flag_z(r == 0);
+		m_flags.C = bit7;
+		break;
+	}
+	// SRA R - [7] -> [7 -> 0] -> C
+	case 0x28: case 0x29: case 0x2A: case 0x2B: case 0x2C: case 0x2D: case 0x2F:
+	{
+		uint8_t r = read_byte(m_r2);
+		uint8_t bit0 = r & 0x1;
+		uint8_t bit7 = (r >> 7) & 0x1;
+		r >>= 1;
+		r |= bit7 << 7;
+		write_byte(m_r2, r);
+		set_flag_z(r == 0);
+		m_flags.from_byte(0);
+		m_flags.C = bit0;
+		break;
+	}
+	// SRA (HL)
+	case 0x2E:
+	{
+		uint16_t hl = read_word(HL);
+		uint8_t r = m_bus->read_byte(hl);
+		uint8_t bit0 = r & 0x1;
+		uint8_t bit7 = (r >> 7) & 0x1;
+		r >>= 1;
+		r |= bit7 << 7;
+		m_bus->write_byte(hl, r);
+		set_flag_z(r == 0);
+		m_flags.from_byte(0);
+		m_flags.C = bit0;
+		break;
+	}
+	// SWAP R
+	case 0x30: case 0x31: case 0x32: case 0x33: case 0x34: case 0x35: case 0x37:
+	{
+		uint8_t r = read_byte(m_r2);
+		r = ((r & 0xF0) >> 4) | ((r & 0x0F) << 4);
+		write_byte(m_r2, r);
+		m_flags.from_byte(0);
+		set_flag_z(r == 0);
+		break;
+	}
+	// SWAP (HL)
+	case 0x36:
+	{
+		uint16_t hl = read_word(HL);
+		uint8_t r = m_bus->read_byte(hl);
+		r = ((r & 0xF0) >> 4) | ((r & 0x0F) << 4);
+		m_bus->write_byte(hl, r);
+		m_flags.from_byte(0);
+		set_flag_z(r == 0);
+		break;
+	}
+	// SRL R - 0 -> [7 -> 0] -> C
+	case 0x38: case 0x39: case 0x3A: case 0x3B: case 0x3C: case 0x3D: case 0x3F:
+	{
+		uint8_t r = read_byte(m_r2);
+		uint8_t bit0 = r & 0x1;
+		r >>= 1;
+		write_byte(m_r2, r);
+		m_flags.from_byte(0);
+		set_flag_z(r == 0);
+		m_flags.C = bit0;
+		break;
+	}
+	// SRL (HL) - 0 -> [7 -> 0] -> C
+	case 0x3E:
+	{
+		uint16_t hl = read_word(HL);
+		uint8_t r = m_bus->read_byte(hl);
+		uint8_t bit0 = r & 0x1;
+		r >>= 1;
+		m_bus->write_byte(hl, r);
+		m_flags.from_byte(0);
+		set_flag_z(r == 0);
+		m_flags.C = bit0;
+		break;
+	}
 	// BIT u3, r8 - test bit n
 	case 0x40: case 0x41: case 0x42: case 0x43: case 0x44: case 0x45: case 0x47:
 	case 0x48: case 0x49: case 0x4A: case 0x4B: case 0x4C: case 0x4D: case 0x4F:
@@ -938,7 +1037,7 @@ int Cpu::handle_cb_prefix() {
 		m_flags.H = 1;
 		break;
 	}
-	// bit u3, (HL)
+	// BIT u3, (HL)
 	case 0x46: case 0x56: case 0x66: case 0x76:
 	case 0x4E: case 0x5E: case 0x6E: case 0x7E:
 	{
