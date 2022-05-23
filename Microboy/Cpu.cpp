@@ -93,6 +93,8 @@ void Cpu::reset() {
 	m_reg[A] = 0x01;
 	m_PC = 0x100;
 	m_SP = 0xFFFE;
+	m_halted = false;
+	IME = true;
 }
 
 uint8_t Cpu::read_byte(RegisterName8Bit reg) {
@@ -200,9 +202,9 @@ int Cpu::service_interrupt() {
 			// ack interrupt request bit in IF
 			IF &= ~(0x1 << i);
 			opcode_call(isr_vectors[i]);
-			break;
+			return 20; // isr comsumes 5 M cycles
 		}
 	}
-	return 20; // isr comsumes 5 M cycles
+	return 0;
 }
 
