@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <string>
 
 #include <fmt/core.h>
 
@@ -8,11 +9,20 @@
 #include "Mbc0.h"
 #include "Mbc1.h"
 
-CartridgeType parse_header(const std::vector<uint8_t> &data) {
+CartridgeSettings parse_header(const std::vector<uint8_t> &data) {
+	CartridgeSettings cart_settings{};
 	// decode the cartridge type
-	uint8_t cartridge_type = data.at(0x147);
-	// may also need to decode the ram and rom size for bigger cartridges
-	return (CartridgeType)cartridge_type;
+	cart_settings.type = static_cast<CartridgeType>(data.at(0x147));
+	// decode the cartridge size
+	cart_settings.rom_size = static_cast<CartridgeRomSize>(data.at(0x148));
+	// decode the cartridge ram size
+	cart_settings.ram_size = static_cast<CartridgeRamSize>(data.at(0x149));
+	// decode the cartridge title
+	for (int i = 0x134; i <= 0x143; ++i) {
+		if (data.at(i) == 0x00) break;
+		cart_settings.title += data.at(i);
+	}
+	return cart_settings;
 }
 
 std::unique_ptr<Cartridge> system_load_rom(const std::string &filename) {
@@ -22,9 +32,12 @@ std::unique_ptr<Cartridge> system_load_rom(const std::string &filename) {
 	}
 	std::vector<uint8_t> rom_data((std::istreambuf_iterator<char>(rom)), std::istreambuf_iterator<char>());
 	fmt::print("file size: {:#04x}\n", rom_data.size());
-	switch (parse_header(rom_data)) {
-	case CartridgeType::MBC0: return std::make_unique<Mbc0>(rom_data);
-	case CartridgeType::MBC1: return std::make_unique<Mbc1>(rom_data);
-	default: return std::make_unique<Mbc0>(rom_data);
-	}
+	auto cart_settings = parse_header(rom_data);
+	fmt::print("Cartridge Title: {}\n", cart_settings.title);
+	fmt::print("Cartridge Type: {}\n", cartridge_types[static_cast<uint8_t>(cart_settings.type)]);
+	fmt::print("Cartridge Rom Size: {}\n", rom_sizes_str[static_cast<uint8_t>(cart_settings.rom_size)]);
+	fmt::print("Cartridge Ram Size: {}\n", ram_sizes_str[static_cast<uint8_t>(cart_settings.ram_size)]);
+
+	// TODO - create a cart builder
+	return std::make_unique<Mbc0>(rom_data);
 }
