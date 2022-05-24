@@ -507,6 +507,9 @@ int Cpu::handle_opcode() {
 	case 0x10:
 	{
 		// don't know what this does for the DMG but could be used in the GBC
+		// for now panic as an umimplemented instr
+		m_halted = true;
+		fmt::print("Hit Stop\n");
 		break;
 	}
 	// DAA
@@ -538,6 +541,20 @@ int Cpu::handle_opcode() {
 	case 0x0B: case 0x1B: case 0x2B: case 0x3B:
 	{
 		write_word(m_r16, read_word(m_r16) - 1);
+		break;
+	}
+	// ADD HL, R16
+	case 0x09: case 0x19: case 0x29: case 0x39:
+	{
+		uint16_t hl = read_word(HL);
+		uint16_t r = read_word(m_r16);
+		uint32_t sum = hl + r;
+		write_word(HL, sum);
+		if (sum > (uint16_t)(hl + r)) m_flags.C = 1;
+		else m_flags.C = 0;
+		if ((((hl & 0xFFF) + (r & 0xFFF)) & 0x1000) == 0x1000) m_flags.H = 1;
+		else m_flags.H = 0;
+		m_flags.N = 0;
 		break;
 	}
 	// INC R
@@ -724,6 +741,17 @@ int Cpu::handle_opcode() {
 	case 0xFE:
 	{
 		opcode_cp(read_byte(A), imm_u8);
+		break;
+	}
+	// ADD SP, i8
+	case 0xE8:
+	{
+		uint16_t sp = read_word(SP);
+		m_flags.from_byte(0);
+		set_flag_c(calc_8_bit_carry(sp, imm_u8));
+		set_flag_h(calc_8_bit_hcarry(sp, imm_u8));
+		sp += (int8_t)imm_u8;
+		write_word(SP, sp);
 		break;
 	}
 	/*-------------------- Rotate and shift Instructions --------------------*/
