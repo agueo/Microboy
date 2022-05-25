@@ -83,14 +83,14 @@ int Cpu::step(int cycles) {
 }
 
 void Cpu::reset() {
-	m_flags.from_byte(0x00);
-	m_reg[B] = 0x01;
-	m_reg[C] = 0x00;
-	m_reg[D] = 0x13;
+	m_reg[A] = 0x01;
+	m_flags.from_byte(0xB0);
+	m_reg[B] = 0x00;
+	m_reg[C] = 0x13;
+	m_reg[D] = 0x00;
 	m_reg[E] = 0xD8;
 	m_reg[H] = 0x01;
 	m_reg[L] = 0x4D;
-	m_reg[A] = 0x01;
 	m_PC = 0x100;
 	m_SP = 0xFFFE;
 	m_halted = false;
@@ -133,7 +133,7 @@ void Cpu::write_word(RegisterName16Bit reg, uint16_t value) {
 
 inline void Cpu::fetch() {
 	m_opcode = m_bus->read_byte(m_PC);
-	fmt::print("PC: {:#04x} Opcode: {:#02x}: {}\n", m_PC, m_opcode, CYCLE_TABLE_DEBUG[m_opcode].name);
+	//fmt::print("PC: {:#04x} Opcode: {:#02x}: {}\n", m_PC, m_opcode, CYCLE_TABLE_DEBUG[m_opcode].name);
 }
 
 int Cpu::decode() {
@@ -143,16 +143,14 @@ int Cpu::decode() {
 	if (m_opcode == 0xcb) {
 		++m_PC;
 		m_opcode = m_bus->read_byte(m_PC);
-		fmt::print("0xCB prefixed {:#02x}: {}\n", m_opcode, CYCLE_TABLE_DEBUG_CB[m_opcode].name);
-		inc_pc = CYCLE_TABLE_DEBUG_CB[m_opcode].len;
+		//fmt::print("0xCB prefixed {:#02x}: {}\n", m_opcode, CYCLE_TABLE_DEBUG_CB[m_opcode].name);
+		inc_pc = CYCLE_TABLE_DEBUG_CB[m_opcode].len-1;
 		cycles = CYCLE_TABLE_DEBUG_CB[m_opcode].cycles;
 		m_is_cb = true;
-		m_PC += inc_pc;
-		return cycles;
+	} else {
+		inc_pc = CYCLE_TABLE_DEBUG[m_opcode].len;
+		cycles = CYCLE_TABLE_DEBUG[m_opcode].cycles;
 	}
-
-	inc_pc = CYCLE_TABLE_DEBUG[m_opcode].len;
-	cycles = CYCLE_TABLE_DEBUG[m_opcode].cycles;
 
 	// Fetched data, registers and immediates to use
 	m_r1 = static_cast<RegisterName8Bit>((m_opcode >> 3) & 0x7);

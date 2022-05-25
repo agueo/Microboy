@@ -120,10 +120,10 @@ void Cpu::opcode_cp(uint8_t a, uint8_t b) {
 
 int Cpu::handle_opcode() {
 	switch (m_opcode) {
-		// NOP
-	case 0: { break;  }
-		  /*-------------------- Load Instructions 8/16 bit --------------------*/
-		  // LD R, R
+	// NOP
+	case 0x00: { break;  }
+	/*-------------------- Load Instructions 8/16 bit --------------------*/
+	// LD R, R
 	case 0x40: case 0x41: case 0x42: case 0x43: case 0x44: case 0x45: case 0x47: // ld b, r
 	case 0x48: case 0x49: case 0x4a: case 0x4b: case 0x4c: case 0x4d: case 0x4f: // ld c, r
 	case 0x50: case 0x51: case 0x52: case 0x53: case 0x54: case 0x55: case 0x57: // ld d, r
@@ -391,7 +391,7 @@ int Cpu::handle_opcode() {
 	case 0xCF: case 0xDF: case 0xEF: case 0xFF:
 	{
 		static uint16_t RST_ADDR[8] = { 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38 };
-		opcode_call((m_opcode >> 3) & 7);
+		opcode_call(RST_ADDR[(m_opcode >> 3) & 7]);
 		break;
 	}
 	// JP i8
@@ -773,19 +773,22 @@ int Cpu::handle_opcode() {
 		uint8_t a = read_byte(A);
 		uint8_t old_carry = m_flags.C;
 		uint8_t bit7 = (a >> 7) & 0x1;
-		a >>= 1;
-		a |= old_carry;
+		a <<= 1;
+		// only set the bit if carry was set
+		if (old_carry) a |= old_carry;
 		write_byte(A, a);
 		m_flags.from_byte(0);
 		m_flags.C = bit7;
 		break;
 	}
-	// RRCA is 0->[7->0]->C
+	// RRCA is [0]->[7->0]->C
 	case 0x0F:
 	{
 		uint8_t a = read_byte(A);
 		uint8_t bit0 = a & 0x1;
 		a >>= 1;
+		// only set the bit if bit0 was set
+		if (bit0) a |= bit0 << 7;
 		write_byte(A, a);
 		m_flags.from_byte(0);
 		m_flags.C = bit0;
@@ -798,7 +801,7 @@ int Cpu::handle_opcode() {
 		uint8_t old_carry = m_flags.C;
 		uint8_t bit0 = a & 0x1;
 		a >>= 1;
-		a |= old_carry << 7;
+		if (old_carry) a |= old_carry << 7;
 		write_byte(A, a);
 		m_flags.from_byte(0);
 		m_flags.C = bit0;
@@ -836,14 +839,13 @@ int Cpu::handle_opcode() {
 
 int Cpu::handle_cb_prefix() {
 	switch (m_opcode) {
-		// RLC R
+		// RLC R C<-[7<-0]<-7
 	case 0x00: case 0x01: case 0x02: case 0x03: case 0x04: case 0x05: case 0x07:
 	{
 		uint8_t r = read_byte(m_r2);
-		uint8_t old_carry = m_flags.C;
 		uint8_t bit7 = (r >> 7) & 0x1;
-		r >>= 1;
-		r |= old_carry;
+		r <<= 1;
+		if (bit7) r |= bit7;
 		write_byte(m_r2, r);
 		m_flags.from_byte(0);
 		set_flag_z(r == 0);
@@ -855,85 +857,86 @@ int Cpu::handle_cb_prefix() {
 	{
 		uint16_t hl = read_word(HL);
 		uint8_t r = m_bus->read_byte(hl);
-		uint8_t old_carry = m_flags.C;
 		uint8_t bit7 = (r >> 7) & 0x1;
-		r >>= 1;
-		r |= old_carry;
+		r <<= 1;
+		if (bit7) r |= bit7;
 		m_bus->write_byte(hl, r);
 		m_flags.from_byte(0);
 		set_flag_z(r == 0);
 		m_flags.C = bit7;
 		break;
 	}
-	// RRC R
+	// RRC R [0]->[7->0]->C
 	case 0x08: case 0x09: case 0x0A: case 0x0B: case 0x0C: case 0x0D: case 0x0F:
 	{
 		uint8_t r = read_byte(m_r2);
 		uint8_t bit0 = r & 0x1;
 		r >>= 1;
+		if (bit0) r |= bit0 << 7;
 		write_byte(m_r2, r);
 		m_flags.from_byte(0);
 		set_flag_z(r == 0);
 		m_flags.C = bit0;
 		break;
 	}
-	// RRC (HL)
+	// RRC (HL) [0]->[7->0]->C
 	case 0x0E:
 	{
 		uint16_t hl = read_word(HL);
 		uint8_t r = m_bus->read_byte(hl);
 		uint8_t bit0 = r & 0x1;
 		r >>= 1;
+		if (bit0) r |= bit0 << 7;
 		m_bus->write_byte(hl, r);
 		m_flags.from_byte(0);
 		set_flag_z(r == 0);
 		m_flags.C = bit0;
 		break;
 	}
-	// RL r
+	// RL r C<-[7<-0]<-C_old
 	case 0x10: case 0x11: case 0x12: case 0x13: case 0x14: case 0x15: case 0x17:
 	{
 		uint8_t r = read_byte(m_r2);
 		uint8_t old_carry = m_flags.C;
 		uint8_t bit7 = (r >> 7) & 0x1;
-		r >>= 1;
-		r |= old_carry;
+		r <<= 1;
+		if (old_carry) r |= old_carry;
 		write_byte(m_r2, r);
 		m_flags.from_byte(0);
 		set_flag_z(r == 0);
 		m_flags.C = bit7;
 		break;
 	}
-	// RL (HL)
+	// RL (HL) C<-[7<-0]<-C_old
 	case 0x16:
 	{
 		uint16_t hl = read_word(HL);
 		uint8_t r = m_bus->read_byte(hl);
 		uint8_t old_carry = m_flags.C;
 		uint8_t bit7 = (r >> 7) & 0x1;
-		r >>= 1;
-		r |= old_carry;
+		r <<= 1;
+		if (old_carry) r |= old_carry;
 		m_bus->write_byte(hl, r);
 		m_flags.from_byte(0);
 		set_flag_z(r == 0);
 		m_flags.C = bit7;
 		break;
 	}
-	// RR r
+	// RR r C_old->[7->0]->C
 	case 0x18: case 0x19: case 0x1A: case 0x1B: case 0x1C: case 0x1D: case 0x1F:
 	{
 		uint8_t r = read_byte(m_r2);
 		uint8_t old_carry = m_flags.C;
 		uint8_t bit0 = r & 0x1;
 		r >>= 1;
-		r |= old_carry << 7;
+		if (old_carry) r |= old_carry << 7;
 		write_byte(m_r2, r);
 		m_flags.from_byte(0);
 		set_flag_z(r == 0);
 		m_flags.C = bit0;
 		break;
 	}
-	// RR (HL)
+	// RR (HL) C_old->[7->0]->C
 	case 0x1E:
 	{
 		uint16_t hl = read_word(HL);
@@ -941,7 +944,7 @@ int Cpu::handle_cb_prefix() {
 		uint8_t old_carry = m_flags.C;
 		uint8_t bit0 = r & 0x1;
 		r >>= 1;
-		r |= old_carry << 7;
+		if (old_carry) r |= old_carry << 7;
 		m_bus->write_byte(hl, r);
 		m_flags.from_byte(0);
 		set_flag_z(r == 0);
@@ -980,7 +983,7 @@ int Cpu::handle_cb_prefix() {
 		uint8_t bit0 = r & 0x1;
 		uint8_t bit7 = (r >> 7) & 0x1;
 		r >>= 1;
-		r |= bit7 << 7;
+		if (bit7) r |= bit7 << 7;
 		write_byte(m_r2, r);
 		set_flag_z(r == 0);
 		m_flags.from_byte(0);
@@ -995,7 +998,7 @@ int Cpu::handle_cb_prefix() {
 		uint8_t bit0 = r & 0x1;
 		uint8_t bit7 = (r >> 7) & 0x1;
 		r >>= 1;
-		r |= bit7 << 7;
+		if (bit7) r |= bit7 << 7;
 		m_bus->write_byte(hl, r);
 		set_flag_z(r == 0);
 		m_flags.from_byte(0);
