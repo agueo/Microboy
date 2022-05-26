@@ -1,5 +1,4 @@
 #include "pch.h"
-#include "../packages/fmt.7.0.1/include/fmt/core.h"
 #include "../Microboy/Cpu.h"
 
 TEST(CpuTests, TestFlagReadWrite) {
@@ -26,4 +25,9 @@ TEST(CpuTests, CpuTestRegReadWriteWord) {
 		cpu.write_word((RegisterName16Bit)i, reg_state.at(i));
 		ASSERT_EQ(cpu.read_word((RegisterName16Bit)i), reg_state.at(i));
 	}
+}
+
+int main(int argc, char **argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }

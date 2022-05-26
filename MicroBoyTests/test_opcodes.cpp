@@ -378,7 +378,7 @@ TEST_F(TestOpcodes, TestOpcodes_push_pop) {
 	};
 
 	std::vector<expected> expected_state_push{
-		{0xFFFC, 0x0100, 16}, {0xFFFA, 0x13D8, 16}, {0xFFF8, 0x014D, 16}, {0xFFF6, 0x100, 16}
+		{0xFFFC, 0x0100, 16, BC}, {0xFFFA, 0x13D8, 16, DE}, {0xFFF8, 0x014D, 16, HL}, {0xFFF6, 0x100, 16, AF}
 	};
 
 	std::vector<expected> expected_state_pop {
@@ -551,7 +551,7 @@ TEST_F(TestOpcodes, TestOpcode_jp_n_cond) {
 	// test rom
 	cpu.reset();
 	std::vector<uint8_t> rom_data {
-		// testing jp, jp Z, jp C with positive conditionals
+		// testing jp NZ, jp NC with negative conditionals
 		0xC2, 0x03, 0x00, 0xD2, 0x06, 0x00, 0x00, 0x00
 	};
 	auto cart = std::make_unique<Mbc0>(rom_data);
@@ -1407,4 +1407,9 @@ TEST_F(TestOpcodes, TestOpcode_swap_r) {
 		ASSERT_EQ(cpu.read_byte(exp.r), exp.value_expected);
 		ASSERT_EQ(cpu.read_byte(F), exp.flags_expected);
 	}
+}
+
+int main(int argc, char **argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }
