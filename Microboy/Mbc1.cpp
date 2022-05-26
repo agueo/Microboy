@@ -22,6 +22,7 @@ uint8_t Mbc1::read_byte(uint16_t addr) {
 	if (addr >= BANK1_BASE && addr <= BANK1_END) {
 		return rom_data[addr];
 	}
+	// Bank 0x1-0x7F - 0x4000 - 0x7FFF
 	else if (addr >= BANK2_BASE && addr <= BANK2_END) {
 		return rom_data[addr * rom_bank_sel];
 	}

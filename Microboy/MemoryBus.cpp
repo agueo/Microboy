@@ -1,7 +1,12 @@
 #include "MemoryBus.h"
+#include <fmt/core.h>
 
 void MemoryBus::reset() {
 	cart = nullptr;
+	for (auto& io : IO) {
+		io = 0xFF;
+	}
+	IO[0xFF44-IO_BASE] = 0x90;
 }
 
 void MemoryBus::load_cart(std::unique_ptr<Cartridge> c) {
@@ -11,6 +16,9 @@ void MemoryBus::load_cart(std::unique_ptr<Cartridge> c) {
 uint8_t MemoryBus::read_byte(uint16_t addr) {
 
 	if (addr >= ROM_BASE && addr <= ROM_END) {
+		return cart->read_byte(addr);
+	}
+	else if (addr >= EXRAM_BASE && addr <= EXRAM_END) {
 		return cart->read_byte(addr);
 	}
 	else if (addr >= VRAM_BASE && addr <= VRAM_END) {
@@ -36,6 +44,9 @@ void MemoryBus::write_byte(uint16_t addr, uint8_t value) {
 	if (addr >= ROM_BASE && addr <= ROM_END) {
 		cart->write_byte(addr, value);
 	}
+	else if (addr >= EXRAM_BASE && addr <= EXRAM_END) {
+		cart->write_byte(addr, value);
+	}
 	else if (addr >= VRAM_BASE && addr <= VRAM_END) {
 		vram[addr - VRAM_BASE] = value;
 	}
@@ -47,6 +58,9 @@ void MemoryBus::write_byte(uint16_t addr, uint8_t value) {
 	}
 	else if (addr >= IO_BASE && addr <= IO_END) {
 		IO[addr - IO_BASE] = value;
+		if (addr == 0xFF01) {
+			fmt::print("{:c}", value);
+		}
 	}
 	else if (addr >= OAM_BASE && addr <= OAM_END) {
 		oam[addr - OAM_BASE] = value;
@@ -64,5 +78,6 @@ uint16_t MemoryBus::read_word(uint16_t addr) {
 void MemoryBus::write_word(uint16_t addr, uint16_t value) {
 	// lo write
 	write_byte(addr, value & 0xFF);
+	// hi write
 	write_byte(addr + 1, (value >> 8) & 0xFF);
 }

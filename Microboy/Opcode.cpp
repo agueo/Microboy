@@ -954,7 +954,7 @@ int Cpu::handle_cb_prefix() {
 	// SLA R - C <- [7 <- 0] <- 0
 	case 0x20: case 0x21: case 0x22: case 0x23: case 0x24: case 0x25: case 0x27:
 	{
-		uint8_t r = read_byte(A);
+		uint8_t r = read_byte(m_r2);
 		uint8_t bit7 = (r >> 7) & 0x1;
 		r <<= 1;
 		write_byte(m_r2, r);
@@ -985,8 +985,8 @@ int Cpu::handle_cb_prefix() {
 		r >>= 1;
 		if (bit7) r |= bit7 << 7;
 		write_byte(m_r2, r);
-		set_flag_z(r == 0);
 		m_flags.from_byte(0);
+		set_flag_z(r == 0);
 		m_flags.C = bit0;
 		break;
 	}
@@ -1000,8 +1000,8 @@ int Cpu::handle_cb_prefix() {
 		r >>= 1;
 		if (bit7) r |= bit7 << 7;
 		m_bus->write_byte(hl, r);
-		set_flag_z(r == 0);
 		m_flags.from_byte(0);
+		set_flag_z(r == 0);
 		m_flags.C = bit0;
 		break;
 	}
