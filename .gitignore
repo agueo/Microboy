@@ -268,7 +268,4 @@ Microboy/Microboy.vcxproj
 
 # vscode
 .vscode/
-MicroBoyTests/meson.build
-Microboy/meson.build
-meson.build
 subprojects/
