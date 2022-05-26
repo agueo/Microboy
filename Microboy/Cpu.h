@@ -19,8 +19,6 @@ enum RegisterName8Bit : uint8_t {
 	B, C, D, E, H, L, F, A
 };
 
-// TODO - When we need to parse the different group types
-// we may need to overload the read_word and write_word methods
 enum RegisterName16Bit : uint8_t {
 	BC, DE, HL, SP, AF, PC
 };
@@ -30,7 +28,6 @@ public:
 	void connect_bus(std::shared_ptr<MemoryBus> bus);
 	int step(int cycles);
 	void reset();
-	// void clock(); // maybe needed
 	bool is_halted() { return m_halted; }
 
 	// read and write functions for registers
@@ -85,17 +82,11 @@ private:
 	uint8_t m_opcode;
 	bool m_is_cb;
 	// useful things for executing instructions
-	// TODO look through all the instructions and glean out the common ones
-	// TODO - which registers 8 bit src and dest
 	RegisterName8Bit m_r1;
 	RegisterName8Bit m_r2;
 	RegisterName16Bit m_r16;
 	uint8_t imm_u8;
 	uint16_t imm_u16;
-
-	// TODO - which registers 16 bit
-	// TODO - an address?
-	// TODO - a signed value
 
 	bool m_halted;
 	bool IME;

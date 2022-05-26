@@ -507,7 +507,7 @@ int Cpu::handle_opcode() {
 	case 0x10:
 	{
 		// don't know what this does for the DMG but could be used in the GBC
-		// for now panic as an umimplemented instr
+		// for now treat as halt and just loop forever
 		m_halted = true;
 		fmt::print("Hit Stop\n");
 		break;

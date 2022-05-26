@@ -69,6 +69,7 @@ int main(int, char **) {
 			}
 		}
 
+		// Render
 		game_window.update();
 
 		// run gameboy only if game is loaded
@@ -78,7 +79,7 @@ int main(int, char **) {
 			// TODO apu step
 		}
 
-		// update
+		// Render
 		game_window.draw(pixels.data()); // TODO - send the ppu data instead
 	}
 	return 0;
