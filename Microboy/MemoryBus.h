@@ -35,8 +35,8 @@ public:
 	void write_word(uint16_t addr, uint16_t value);
 
 
-private:
 	std::array<uint8_t, 0x2000> vram; // this will belong to the ppu
+private:
 	std::array<uint8_t, 0x4000> wram;
 	std::array<uint8_t, 0xA0> oam; // this will belong to the ppu
 	std::array<uint8_t, 0x80> IO; // TODO - put this in it's own thing eventually
