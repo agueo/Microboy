@@ -24,7 +24,7 @@ void MemoryBus::reset() {
     IO[0xFF4A - IO_BASE] = 0x00; // WY
     IO[0xFF4B - IO_BASE] = 0x00; // WX
     IO[0xFF4D - IO_BASE] = 0xFF; // KEY1
-    hram[IE_ADDR - HRAM_BASE] = 0x00;
+    ie = 0x00;
 }
 
 void MemoryBus::load_cart(std::unique_ptr<Cartridge> c) {
@@ -53,6 +53,9 @@ uint8_t MemoryBus::read_byte(uint16_t addr) {
 	else if (addr >= OAM_BASE && addr <= OAM_END) {
 		return oam[addr - OAM_BASE];
 	}
+	else if (addr == IE_ADDR) {
+		return ie;
+	}
 	return 0;
 }
 
@@ -80,6 +83,9 @@ void MemoryBus::write_byte(uint16_t addr, uint8_t value) {
 	}
 	else if (addr >= OAM_BASE && addr <= OAM_END) {
 		oam[addr - OAM_BASE] = value;
+	}
+	else if (addr == IE_ADDR) {
+		ie = value;
 	}
 	return;
 }

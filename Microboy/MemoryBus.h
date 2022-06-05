@@ -23,6 +23,20 @@ constexpr int HRAM_END	= 0xFFFE;
 constexpr int IF_ADDR	= 0xFF0F;
 constexpr int IE_ADDR	= 0xFFFF;
 
+// PPU registers
+constexpr int  LCDC = 0xFF40;	// R/W
+constexpr int  STAT = 0xFF41;	// R/W
+constexpr int  SCY = 0xFF42;	// R/W
+constexpr int  SCX = 0xFF43;	// R/W
+constexpr int  LY = 0xFF44;		// R 
+constexpr int  LYC = 0xFF45;	// R/W
+constexpr int  DMA = 0xFF46;	// 
+constexpr int  BGP = 0xFF47;	// R/W
+constexpr int  OBJP0 = 0xFF48;	// R/W
+constexpr int  OBJP1 = 0xFF49;	// R/W
+constexpr int  WY = 0xFF4A;		// R/W
+constexpr int  WX = 0xFF4B;		// R/W
+
 class MemoryBus
 {
 public:
@@ -41,6 +55,7 @@ private:
 	std::array<uint8_t, 0xA0> oam; // this will belong to the ppu
 	std::array<uint8_t, 0x80> IO; // TODO - put this in it's own thing eventually
 	std::array<uint8_t, 0x7f> hram;
+	uint8_t ie;
 	std::unique_ptr<Cartridge> cart;
 	// enhancement have a map for objects that want to register their high and low addr areas and a callback
 };
