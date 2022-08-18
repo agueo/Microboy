@@ -1,5 +1,6 @@
 #pragma once
 #include "Cartridge.h"
+
 class Mbc1 : public Cartridge {
 public:
 	Mbc1(std::vector<uint8_t> data) : rom_bank_sel(1), ram_bank_sel{1}, ram_enabled{false}, rom_data{data}, ram_data{} {}

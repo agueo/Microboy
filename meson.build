@@ -31,6 +31,14 @@ test_cpu = executable('TestCpu',
   link_with: [libdmg],
   )
 
+test_bus = executable('TestBus',
+  'MicroBoyTests/test_bus.cpp',
+  include_directories: [inc],
+  dependencies: [gtest_dep],
+  link_with: [libdmg],
+  )
+
+
 test('Opcode Tests', test_opcodes)
 test('Cpu Tests', test_cpu)
-
+test('Bus Tests', test_bus)

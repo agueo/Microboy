@@ -133,7 +133,7 @@ void Cpu::write_word(RegisterName16Bit reg, uint16_t value) {
 
 inline void Cpu::fetch() {
 	m_opcode = m_bus->read_byte(m_PC);
-	//fmt::print("PC: {:#04x} Opcode: {:#02x}: {}\n", m_PC, m_opcode, CYCLE_TABLE_DEBUG[m_opcode].name);
+	// fmt::print("PC: {:#04x} Opcode: {:#02x}: {}\n", m_PC, m_opcode, CYCLE_TABLE_DEBUG[m_opcode].name);
 }
 
 int Cpu::decode() {
@@ -143,7 +143,7 @@ int Cpu::decode() {
 	if (m_opcode == 0xcb) {
 		++m_PC;
 		m_opcode = m_bus->read_byte(m_PC);
-		//fmt::print("0xCB prefixed {:#02x}: {}\n", m_opcode, CYCLE_TABLE_DEBUG_CB[m_opcode].name);
+		// fmt::print("0xCB prefixed {:#02x}: {}\n", m_opcode, CYCLE_TABLE_DEBUG_CB[m_opcode].name);
 		inc_pc = CYCLE_TABLE_DEBUG_CB[m_opcode].len-1;
 		cycles = CYCLE_TABLE_DEBUG_CB[m_opcode].cycles;
 		m_is_cb = true;
@@ -200,6 +200,7 @@ int Cpu::service_interrupt() {
 			// ack interrupt request bit in IF
 			IF &= ~(0x1 << i);
 			opcode_call(isr_vectors[i]);
+			fmt::print("servicing interrupt: {}\n", i);
 			return 20; // isr comsumes 5 M cycles
 		}
 	}

@@ -57,3 +57,7 @@ TEST(CarTests, CartTest_mbc1) {
 // TODO Do the same for the cart ie reading to rom and
 
 // Lets Load an MBC1 rom and try to read from the different banks 64KB should have 4 banks
+int main(int argc, char **argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}

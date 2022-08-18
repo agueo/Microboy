@@ -269,3 +269,4 @@ Microboy/Microboy.vcxproj
 # vscode
 .vscode/
 subprojects/
+roms/

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef CPU_H
+#define CPU_H
 
 #include <cstdint>
 #include <memory>
@@ -70,6 +71,7 @@ private:
 	void set_flag_h(bool set);
 	void set_flag_z(bool set);
 	void set_flag_n(bool set);
+
 	//--------------------
 	// Data members
 	//--------------------
@@ -78,9 +80,9 @@ private:
 	uint16_t m_SP;
 	uint16_t m_PC;
 
-	// Create an instruction class that holds everything it needs to execute
 	uint8_t m_opcode;
 	bool m_is_cb;
+
 	// useful things for executing instructions
 	RegisterName8Bit m_r1;
 	RegisterName8Bit m_r2;
@@ -95,3 +97,5 @@ private:
 	std::shared_ptr<MemoryBus> m_bus;
 };
 
+
+#endif

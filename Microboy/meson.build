@@ -1,6 +1,8 @@
 libdmg = library('libdmg',
   ['Cpu.cpp',
   'MemoryBus.cpp',
+  'JoyPad.cpp',
+  'InterruptObserver.cpp',
   'Opcode.cpp',
   'Cartridge.cpp',
   'Mbc0.cpp',
