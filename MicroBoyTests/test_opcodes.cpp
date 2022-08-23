@@ -4,13 +4,20 @@
 #include "../Microboy/Cpu.h"
 #include "../Microboy/Mbc0.h"
 #include "../Microboy/MemoryBus.h"
+#include "../Microboy/InterruptObserver.h"
+#include "../Microboy/JoyPad.h"
 
 class TestOpcodes : public ::testing::Test {
 
 protected:
 	void SetUp() override {
 		bus = std::make_shared<MemoryBus>();
+		int_obs = std::make_shared<InterruptObserver>();
+	    joypad = std::make_shared<JoyPad>();
+
 		cpu.connect_bus(bus);
+	    bus->connect_interrupt_observer(int_obs);
+	    bus->connect_joypad(joypad);
 		reset_cpu();
 	}
 
@@ -24,6 +31,8 @@ protected:
 // We'll need a few things to test the opcodes
 	Cpu cpu{};
 	std::shared_ptr<MemoryBus> bus{nullptr};
+	std::shared_ptr<InterruptObserver> int_obs{nullptr};
+    std::shared_ptr<JoyPad> joypad{nullptr};
 };
 
 /*--------------------------------------------------*/
@@ -281,12 +290,12 @@ TEST_F(TestOpcodes, TestOpcode_ld_IO_a) {
 	// LD A, (0xFF00 + C)
 	// LD (0xFF00 + C), A
 	cpu.write_byte(C, 0x04);
-	bus->write_byte(IO_BASE, 0xAB);
+	bus->write_byte(IO_BASE+2, 0xAB);
 	cpu.write_word(PC, 0);
 
 	// test rom
 	std::vector<uint8_t> rom_data {
-		0xF0, 0x00, 0xE0, 0x00, 0xF2, 0xE2, 0x00, 0x00
+		0xF0, 0x02, 0xE0, 0x02, 0xF2, 0xE2, 0x00, 0x00
 	};
 	auto cart = std::make_unique<Mbc0>(rom_data);
 	bus->load_cart(std::move(cart));
@@ -300,7 +309,7 @@ TEST_F(TestOpcodes, TestOpcode_ld_IO_a) {
 	};
 	// tables driven testing
 	std::vector<expected> expected_state {
-		{IO_BASE, 0xAB, 0xAB, 12}, {IO_BASE, 0xAB, 0xAB, 12},
+		{IO_BASE+2, 0xAB, 0xAB, 12}, {IO_BASE+2, 0xAB, 0xAB, 12},
 		{IO_BASE+4, 0x00, 0x00, 8}, {IO_BASE+4, 0x00, 0x00, 8}
 	};
 

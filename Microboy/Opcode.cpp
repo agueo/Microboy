@@ -528,6 +528,7 @@ int Cpu::handle_opcode() {
 		}
 		set_flag_z(a == 0);
 		m_flags.H = 0;
+		write_byte(A, a);
 		break;
 	}
 	/*-------------------- Arithmetic Instructions --------------------*/
