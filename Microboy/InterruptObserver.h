@@ -12,7 +12,9 @@ enum class InterruptSource {
     JOYPAD,
 };
 
-constexpr int NUM_INTERRUPTS = 5;
+// Interrupt Addresses
+constexpr int IF_ADDR	= 0xFF0F;
+constexpr int IE_ADDR	= 0xFFFF;
 
 /*
  * InterruptObserver
@@ -20,13 +22,14 @@ constexpr int NUM_INTERRUPTS = 5;
  */
 class InterruptObserver {
 public:
-    void reset() { m_if = 0xE1; }
+    void reset();
     void schedule_interrupt(InterruptSource src);
-    uint8_t read_byte() { return m_if; }
-    void write_byte(uint8_t val) { m_if = val & 0x1F; }
+    uint8_t read_byte(uint16_t addr);
+    void write_byte(uint16_t addr, uint8_t val);
 
 private:
     uint8_t m_if = 0xE1;
+    uint8_t m_ie = 0x00;
 };
 
 

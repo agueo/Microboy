@@ -2,6 +2,7 @@
 #include "InterruptObserver.h"
 #include "JoyPad.h"
 #include "MemoryBus.h"
+#include "Timer.h"
 
 MemoryBus::MemoryBus() {
     vram.resize(0x2000);
@@ -9,20 +10,25 @@ MemoryBus::MemoryBus() {
     oam.resize(0xA0);
     IO.resize(0x80);
     hram.resize(0x7f);
+    cart = nullptr;
+    m_joypad = nullptr;
+    m_timer = nullptr;
 }
 
 void MemoryBus::reset() {
     cart = nullptr;
+    m_joypad->reset();
+    m_int_observer->reset();
+    m_timer->reset();
+
     // All hardware registers at PC 0x100
-    IO[JOYP_ADDR - IO_BASE] = 0xCF; // P1
+    // Serial
     IO[SB_ADDR - IO_BASE] 	= 0x00; // SB
     IO[SC_ADDR - IO_BASE] 	= 0x7E; // SC
-    IO[DIV_ADDR - IO_BASE] 	= 0x18; // DIV
-    IO[TIMA_ADDR - IO_BASE] = 0x00; // TIMA
-    IO[TMA_ADDR - IO_BASE] 	= 0x00; // TMA
-    IO[TAC_ADDR - IO_BASE] 	= 0xF8; // TAC
-    IO[IF_ADDR - IO_BASE] 	= 0xE1; // IF
+
     // Skipping sound registers
+
+    // PPU
     IO[LCDC_ADDR - IO_BASE] = 0x91; // LCDC
     IO[STAT_ADDR - IO_BASE] = 0x85; // STAT
     IO[SCY_ADDR - IO_BASE] 	= 0x00; // SCY
@@ -33,7 +39,6 @@ void MemoryBus::reset() {
     IO[BGP_ADDR - IO_BASE] 	= 0xFC; // BGP
     IO[WY_ADDR - IO_BASE] 	= 0x00; // WY
     IO[WX_ADDR - IO_BASE] 	= 0x00; // WX
-    hram[IE_ADDR - HRAM_BASE] = 0x00; // IE
 }
 
 void MemoryBus::load_cart(std::unique_ptr<Cartridge> c) {
@@ -43,6 +48,15 @@ void MemoryBus::load_cart(std::unique_ptr<Cartridge> c) {
 void MemoryBus::connect_interrupt_observer(std::shared_ptr<InterruptObserver> observer) {
     m_int_observer = observer;
 }
+
+void MemoryBus::connect_joypad(std::shared_ptr<JoyPad> joypad) { 
+    m_joypad = joypad;
+}
+
+void MemoryBus::connect_timer(std::shared_ptr<Timer> timer) {
+    m_timer = timer;
+}
+
 
 uint8_t MemoryBus::read_byte(uint16_t addr) {
     if (addr >= ROM_BASE && addr <= ROM_END) {
@@ -57,6 +71,9 @@ uint8_t MemoryBus::read_byte(uint16_t addr) {
     else if (addr >= WRAM_BASE && addr <= WRAM_END) {
         return wram[addr - WRAM_BASE];
     }
+    else if (addr >= ECHO_BASE && addr <= ECHO_END) {
+        return wram[addr - ECHO_BASE];
+    }
     else if (addr >= HRAM_BASE && addr <= HRAM_END) {
         return hram[addr - HRAM_BASE];
     }
@@ -67,8 +84,14 @@ uint8_t MemoryBus::read_byte(uint16_t addr) {
             data = m_joypad->read_byte();
 			break;
 		case IF_ADDR:
-			data = m_int_observer->read_byte();
+			data = m_int_observer->read_byte(IF_ADDR);
 			break;
+        case DIV_ADDR:
+        case TIMA_ADDR:
+        case TMA_ADDR:
+        case TAC_ADDR:
+            data = m_timer->read_byte(addr);
+            break;
 		default:
         	data = IO[addr - IO_BASE];
 			break;
@@ -79,7 +102,10 @@ uint8_t MemoryBus::read_byte(uint16_t addr) {
         return oam[addr - OAM_BASE];
     }
     else if (addr == IE_ADDR) {
-        return hram[IE_ADDR - HRAM_BASE];
+        return m_int_observer->read_byte(IE_ADDR);
+    } else {
+       fmt::print("Illegal memory access: {:#04x}\n", addr);
+       exit(-1);
     }
     return 0;
 }
@@ -97,18 +123,26 @@ void MemoryBus::write_byte(uint16_t addr, uint8_t value) {
     else if (addr >= WRAM_BASE && addr <= WRAM_END) {
         wram[addr - WRAM_BASE] = value;
     }
+    else if (addr >= ECHO_BASE && addr <= ECHO_END) {
+        wram[addr - ECHO_BASE] = value;
+    }
     else if (addr >= HRAM_BASE && addr <= HRAM_END) {
         hram[addr - HRAM_BASE] = value;
     }
     else if (addr >= IO_BASE && addr <= IO_END) {
-        // TODO maybe clean this up
 		switch(addr) {
 		case JOYP_ADDR:
             m_joypad->write_byte(value);
 			break;
 		case IF_ADDR:
-            m_int_observer->write_byte(value);
+            m_int_observer->write_byte(IF_ADDR, value);
 			break;
+        case DIV_ADDR:
+        case TIMA_ADDR:
+        case TMA_ADDR:
+        case TAC_ADDR:
+            m_timer->write_byte(addr, value);
+            break;
 		default:
         	IO[addr - IO_BASE] = value;
 			break;
@@ -121,7 +155,10 @@ void MemoryBus::write_byte(uint16_t addr, uint8_t value) {
         oam[addr - OAM_BASE] = value;
     }
     else if (addr == IE_ADDR) {
-        hram[IE_ADDR - HRAM_BASE] = value;
+        m_int_observer->write_byte(IE_ADDR, value);
+    } else {
+       fmt::print("Illegal memory access: {:#04x}\n", addr);
+       exit(-1);
     }
     return;
 }

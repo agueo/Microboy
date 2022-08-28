@@ -31,5 +31,4 @@ void Window::draw(const uint32_t *data) {
 		SDL_UpdateTexture(texture, NULL, data, WIDTH*4);
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
 		SDL_RenderPresent(renderer);
-		SDL_Delay(10);
 }

@@ -92,6 +92,8 @@ private:
 
 	bool m_halted;
 	bool IME;
+	uint8_t ei_delay;
+	uint8_t ime_enable;
 
 	// Bus connection
 	std::shared_ptr<MemoryBus> m_bus;

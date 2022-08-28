@@ -248,7 +248,7 @@ int Cpu::handle_opcode() {
 	// LD HL, SP + i8
 	case 0xF8:
 	{
-		write_word(HL, m_bus->read_word(m_SP + (int8_t)imm_u8));
+		write_word(HL, m_SP + (int8_t)imm_u8);
 		set_flag_c(calc_8_bit_carry(m_SP, (int8_t)imm_u8));
 		set_flag_h(calc_8_bit_hcarry((uint8_t)m_SP, (int8_t)imm_u8));
 		m_flags.Z = 0;
@@ -264,7 +264,7 @@ int Cpu::handle_opcode() {
 	// LD (SP), HL
 	case 0xF9:
 	{
-		write_word(SP, read_word(HL));
+		m_bus->write_word(read_word(SP), read_word(HL));
 		break;
 	}
 	/*-------------------- Stack Instructions -------------------------*/
@@ -495,12 +495,15 @@ int Cpu::handle_opcode() {
 	case 0xF3:
 	{
 		IME = false;
+		ime_enable = false;
 		break;
 	}
 	// EI
 	case 0xFB:
 	{
-		IME = true;
+		// should be delayed by 1 instr
+		ei_delay = 1;
+		ime_enable = true;
 		break;
 	}
 	// STOP

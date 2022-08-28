@@ -15,6 +15,7 @@
 #include "MemoryBus.h"
 #include "InterruptObserver.h"
 #include "JoyPad.h"
+#include "Timer.h"
 #include "Window.h"
 
 const std::vector<uint32_t> gPalette{0x89d795FF, 0x629A6AFF, 0x3B5C40FF, 0x141F15FF};
@@ -62,12 +63,16 @@ int main(int, char **) {
 	std::shared_ptr<MemoryBus> bus = std::make_shared<MemoryBus>();
 	std::shared_ptr<InterruptObserver> int_obs = std::make_shared<InterruptObserver>();
 	std::shared_ptr<JoyPad> joypad = std::make_shared<JoyPad>();
+	std::shared_ptr<Timer> timer = std::make_shared<Timer>();
 
 	cpu.reset();
 	cpu.connect_bus(bus);
-	bus->connect_interrupt_observer(int_obs);
 	bus->connect_joypad(joypad);
+	bus->connect_timer(timer);
+
+	bus->connect_interrupt_observer(int_obs);
 	joypad->connect_interrupt_observer(int_obs);
+	timer->connect_interrupt_observer(int_obs);
 
 	// control flags
 	bool running{ true };
@@ -156,12 +161,14 @@ int main(int, char **) {
 		game_window.update();
 		// run gameboy only if game is loaded
 		if (rom_loaded) {
-			cpu.step(69905);
+			int cycles_ran = cpu.step(440);
+			timer->step(cycles_ran);
 			// TODO ppu step
 			// TODO apu step
-			// TODO timer step
 		}
+
 		// lets fill the pixel data tilemap is 20wx18h
+		/*
 		int offset = 0;
 		for (int y = 0; y < 18; ++y) {
 			for (int x = 0; x < 20; ++x) {
@@ -169,8 +176,10 @@ int main(int, char **) {
 				offset += 16;
 			}
 		}
+		*/
 		// Render
 		game_window.draw(pixels.data()); // TODO - send the ppu data instead
+		fflush(stdout);
 	}
 	return 0;
 }

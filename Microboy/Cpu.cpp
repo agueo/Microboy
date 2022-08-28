@@ -69,6 +69,14 @@ int Cpu::step(int cycles) {
 	while (cycles_taken < cycles) {
 		// handle interrupts and halt
 		// interrupt handler
+		if (ime_enable) {
+			if(ei_delay == 0) {
+				ime_enable = false;
+				IME = true;
+			} else {
+				--ei_delay;
+			}
+		}
 		cycles_taken += service_interrupt();
 		if (m_halted) {
 			cycles_taken += 4;
@@ -94,7 +102,8 @@ void Cpu::reset() {
 	m_PC = 0x100;
 	m_SP = 0xFFFE;
 	m_halted = false;
-	IME = true;
+	IME = false;
+	ei_delay = 0;
 }
 
 uint8_t Cpu::read_byte(RegisterName8Bit reg) {
@@ -178,13 +187,20 @@ int Cpu::execute() {
 int Cpu::service_interrupt() {
 	// ISR vectors
 	static uint8_t isr_vectors[5]{ 0x40, 0x48, 0x50, 0x58, 0x60 };
-	// Quit out early if IME is diabled
-	if (IME == false) { return 0; }
 
 	// Exit halt if IF & IE are non-zero NOTE: TODO emulate halt bug
 	if (m_bus->read_byte(IE_ADDR) & m_bus->read_byte(IF_ADDR)) {
+		// in either case if we have a pending interrupt
+		// we leave halt
+		if (IME == false) {
+			// TODO halt bug
+			// causes prev instr to be read twice
+		}
 		m_halted = false;
 	}
+
+	// Quit out early if IME is diabled
+	if (IME == false) { return 0; }
 
 	// check each interrupt bit from highest priority to lowest
 	for (int i = 0; i < 5; ++i) {
@@ -199,8 +215,11 @@ int Cpu::service_interrupt() {
 			IME = false;
 			// ack interrupt request bit in IF
 			IF &= ~(0x1 << i);
+			// write IF back into memory
+			m_bus->write_byte(IF_ADDR, IF);
+			// call the handler
 			opcode_call(isr_vectors[i]);
-			fmt::print("servicing interrupt: {}\n", i);
+			//fmt::print("servicing interrupt: {}\n", i);
 			return 20; // isr comsumes 5 M cycles
 		}
 	}
