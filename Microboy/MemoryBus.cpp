@@ -92,6 +92,9 @@ uint8_t MemoryBus::read_byte(uint16_t addr) {
         case TAC_ADDR:
             data = m_timer->read_byte(addr);
             break;
+        case 0xFF4D:
+            data = 0xFF;
+            break;
 		default:
         	data = IO[addr - IO_BASE];
 			break;
@@ -103,6 +106,8 @@ uint8_t MemoryBus::read_byte(uint16_t addr) {
     }
     else if (addr == IE_ADDR) {
         return m_int_observer->read_byte(IE_ADDR);
+    } else if (addr >= PROHIB_BASE && addr <= PROHIB_END) {
+        return 00;
     } else {
        fmt::print("Illegal memory access: {:#04x}\n", addr);
        exit(-1);
@@ -143,6 +148,8 @@ void MemoryBus::write_byte(uint16_t addr, uint8_t value) {
         case TAC_ADDR:
             m_timer->write_byte(addr, value);
             break;
+        case LY_ADDR:
+            break;
 		default:
         	IO[addr - IO_BASE] = value;
 			break;
@@ -153,8 +160,9 @@ void MemoryBus::write_byte(uint16_t addr, uint8_t value) {
     }
     else if (addr >= OAM_BASE && addr <= OAM_END) {
         oam[addr - OAM_BASE] = value;
-    }
-    else if (addr == IE_ADDR) {
+    } else if (addr >= PROHIB_BASE && addr <= PROHIB_END) {
+        return;
+    } else if (addr == IE_ADDR) {
         m_int_observer->write_byte(IE_ADDR, value);
     } else {
        fmt::print("Illegal memory access: {:#04x}\n", addr);

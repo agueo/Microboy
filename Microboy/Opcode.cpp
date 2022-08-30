@@ -65,14 +65,15 @@ void Cpu::opcode_add(uint8_t a, uint8_t b) {
 }
 
 void Cpu::opcode_adc(uint8_t a, uint8_t b) {
-	uint8_t add_a_r = a + b + m_flags.C;
+	uint8_t c = m_flags.C;
+	uint8_t add_a_r = a + b + c;
 	write_byte(A, add_a_r);
 	set_flag_z(add_a_r == 0);
 	m_flags.N = 0;
-	set_flag_c(calc_8_bit_carry(a, b, m_flags.C));
-	set_flag_h(calc_8_bit_hcarry(a, b, m_flags.C));
-
+	set_flag_h(calc_8_bit_hcarry(a, b, c));
+	set_flag_c(calc_8_bit_carry(a, b, c));
 }
+
 void Cpu::opcode_sub(uint8_t a, uint8_t b) {
 	uint8_t sub_a_r = a - b;
 	write_byte(A, sub_a_r);
@@ -83,12 +84,13 @@ void Cpu::opcode_sub(uint8_t a, uint8_t b) {
 }
 
 void Cpu::opcode_sbc(uint8_t a, uint8_t b) {
-	uint8_t sub_a_r = a - b - m_flags.C;
+	uint8_t c = m_flags.C;
+	uint8_t sub_a_r = a - b - c;
 	write_byte(A, sub_a_r);
 	set_flag_z(sub_a_r == 0);
 	m_flags.N = 1;
-	set_flag_h(calc_8_bit_hborrow(a, b, m_flags.C));
-	set_flag_c(calc_8_bit_borrow(a, b, m_flags.C));
+	set_flag_h(calc_8_bit_hborrow(a, b, c));
+	set_flag_c(calc_8_bit_borrow(a, b, c));
 }
 
 void Cpu::opcode_and(uint8_t a) {
@@ -242,15 +244,16 @@ int Cpu::handle_opcode() {
 	// LD A, (u16)
 	case 0xFA:
 	{
-		write_byte(A, m_bus->read_byte(imm_u8));
+		write_byte(A, m_bus->read_byte(imm_u16));
 		break;
 	}
 	// LD HL, SP + i8
 	case 0xF8:
 	{
-		write_word(HL, m_SP + (int8_t)imm_u8);
-		set_flag_c(calc_8_bit_carry(m_SP, (int8_t)imm_u8));
-		set_flag_h(calc_8_bit_hcarry((uint8_t)m_SP, (int8_t)imm_u8));
+		int8_t s_i8 = (int8_t)imm_u8;
+		write_word(HL, m_SP + s_i8);
+		set_flag_c(calc_8_bit_carry(m_SP, s_i8));
+		set_flag_h(calc_8_bit_hcarry((uint8_t)m_SP, s_i8));
 		m_flags.Z = 0;
 		m_flags.N = 0;
 		break;
@@ -261,10 +264,10 @@ int Cpu::handle_opcode() {
 		m_bus->write_word(imm_u16, m_SP);
 		break;
 	}
-	// LD (SP), HL
+	// LD SP, HL
 	case 0xF9:
 	{
-		m_bus->write_word(read_word(SP), read_word(HL));
+		write_word(SP, read_word(HL));
 		break;
 	}
 	/*-------------------- Stack Instructions -------------------------*/
@@ -489,6 +492,7 @@ int Cpu::handle_opcode() {
 	case 0x76:
 	{
 		m_halted = true;
+		fmt::print("Hit halt\n");
 		break;
 	}
 	// DI
@@ -615,7 +619,7 @@ int Cpu::handle_opcode() {
 		opcode_add(read_byte(A),  m_bus->read_byte(read_word(HL)));
 		break;
 	}
-	// ADC A, u8
+	// ADD A, u8
 	case 0xC6:
 	{
 		opcode_add(read_byte(A), imm_u8);
@@ -814,7 +818,7 @@ int Cpu::handle_opcode() {
 	// CPL A
 	case 0x2F:
 	{
-		write_byte(A, read_byte(A));
+		write_byte(A, ~read_byte(A));
 		m_flags.N = 1;
 		m_flags.H = 1;
 		break;
@@ -1122,7 +1126,7 @@ int Cpu::handle_cb_prefix() {
 	{
 		uint8_t testbit = static_cast<uint8_t>(m_r1);
 		uint8_t r = read_byte(m_r2);
-		r &= 1 << testbit;
+		r |= 1 << testbit;
 		write_byte(m_r2, r);
 		break;
 	}
@@ -1133,7 +1137,7 @@ int Cpu::handle_cb_prefix() {
 		uint8_t testbit = static_cast<uint8_t>(m_r1);
 		uint16_t hl = read_word(HL);
 		uint8_t r = m_bus->read_byte(hl);
-		r &= 1 << testbit;
+		r |= 1 << testbit;
 		m_bus->write_byte(hl, r);
 		break;
 	}

@@ -1,4 +1,5 @@
 #include <fmt/core.h>
+#include <stdio.h>
 
 #include "Cpu.h"
 #include "Opcode.h"
@@ -85,6 +86,7 @@ int Cpu::step(int cycles) {
 		fetch();
 		cycles_taken += decode();
 		cycles_taken += execute();
+		//debug_print(*this);
 	}
 
 	return cycles_taken;
@@ -226,3 +228,17 @@ int Cpu::service_interrupt() {
 	return 0;
 }
 
+void debug_print(Cpu& cpu) {
+	printf("A: %02X ", cpu.m_reg[7]);
+	printf("F: %02X ", cpu.m_flags.to_byte());
+	printf("B: %02X ", cpu.m_reg[0]);
+	printf("C: %02X ", cpu.m_reg[1]);
+	printf("D: %02X ", cpu.m_reg[2]);
+	printf("E: %02X ", cpu.m_reg[3]);
+	printf("H: %02X ", cpu.m_reg[4]);
+	printf("L: %02X ", cpu.m_reg[5]);
+	printf("SP: %04X ", cpu.m_SP);
+	printf("PC: 00:%04X ", cpu.m_PC);
+	uint16_t pc = cpu.m_PC;
+	printf("(%02X %02X %02X %02X)\n", cpu.m_bus->read_byte(pc), cpu.m_bus->read_byte(pc + 1), cpu.m_bus->read_byte(pc + 2), cpu.m_bus->read_byte(pc + 3));
+}

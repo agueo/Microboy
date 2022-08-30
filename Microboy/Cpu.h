@@ -36,6 +36,7 @@ public:
 	void write_byte(RegisterName8Bit reg, uint8_t value);
 	uint16_t read_word(RegisterName16Bit reg);
 	void write_word(RegisterName16Bit reg, uint16_t value);
+	friend void debug_print(Cpu &cpu);
 
 private:
 
