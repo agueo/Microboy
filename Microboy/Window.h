@@ -10,7 +10,6 @@ public:
 	int init();
 	void update();
 	void draw(const uint32_t *data);
-	void handle_events();
 
 private:
 	SDL_Window *window;

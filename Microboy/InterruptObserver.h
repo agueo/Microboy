@@ -28,8 +28,8 @@ public:
     void write_byte(uint16_t addr, uint8_t val);
 
 private:
-    uint8_t m_if = 0xE1;
-    uint8_t m_ie = 0x00;
+    uint8_t m_if{0xE1};
+    uint8_t m_ie{0x00};
 };
 
 

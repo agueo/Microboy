@@ -36,16 +36,18 @@ public:
     void step(int cycles);
     uint8_t read_byte(uint16_t addr);
     void write_byte(uint16_t addr, uint8_t val);
+
 private:
-    uint16_t m_div = 0xAB00; 
-    uint8_t m_tima = 0x00; 
-    uint8_t m_tma = 0x00; 
-    uint8_t m_tac = 0xF8; 
-    bool m_timer_enabled = false;
-    uint16_t m_tima_freq = 1024;
-    uint16_t m_cycles_until_next_tima = 0;
-    uint8_t m_tima_reset_delay = 0;
-    bool m_tima_overflow = false;
+    uint16_t m_div{0xAB00}; 
+    uint8_t m_tima{0x00}; 
+    uint8_t m_tma {0x00}; 
+    uint8_t m_tac {0xF8}; 
+    bool m_timer_enabled {true};
+    bool double_speed{false};
+    uint16_t m_tima_freq {1024};
+    uint16_t m_cycles_until_next_tima {0};
+    uint16_t m_cycles_until_next_div{0};
+    bool m_tima_overflow {false};
     std::shared_ptr<InterruptObserver> m_int_obs{nullptr};
 };
 

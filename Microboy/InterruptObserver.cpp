@@ -17,28 +17,8 @@ void InterruptObserver::reset() {
 }
 
 void InterruptObserver::schedule_interrupt(InterruptSource src) {
-    switch (src) {
-    case InterruptSource::VBLANK:
-        m_if |= 1 << 0;  
-        // fmt::print("Requesting interrupt: {}\n", interrupt_source_str[0]);
-        break;
-    case InterruptSource::LCD_STAT:
-        m_if |= 1 << 1;
-        // fmt::print("Requesting interrupt: {}\n", interrupt_source_str[1]);
-        break;
-    case InterruptSource::TIMER:
-        m_if |= 1 << 2;  
-        // fmt::print("Requesting interrupt: {}\n", interrupt_source_str[2]);
-        break;
-    case InterruptSource::SERIAL:
-        m_if |= 1 << 3;  
-        // fmt::print("Requesting interrupt: {}\n", interrupt_source_str[3]);
-        break;
-    case InterruptSource::JOYPAD:
-        m_if |= 1 << 4;  
-        // fmt::print("Requesting interrupt: {}\n", interrupt_source_str[4]);
-        break;
-    }
+    m_if |= 1 << static_cast<uint8_t>(src);
+    // fmt::print("Requesting interrupt: {}\n", interrupt_source_str[static_cast<size_t>(src)]);
 }
 
 uint8_t InterruptObserver::read_byte(uint16_t addr) {

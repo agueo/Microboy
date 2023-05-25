@@ -492,7 +492,6 @@ int Cpu::handle_opcode() {
 	case 0x76:
 	{
 		m_halted = true;
-		fmt::print("Hit halt\n");
 		break;
 	}
 	// DI

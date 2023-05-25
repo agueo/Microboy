@@ -15,6 +15,9 @@ const uint16_t ROM_REG_END 	= 0x3FFF;
 const uint16_t RAM_REG_BASE = 0x0000;
 const uint16_t RAM_REG_END 	= 0x1FFF;
 
+Mbc1::Mbc1(std::vector<uint8_t> data) 
+    : rom_bank_sel(1), ram_bank_sel{1}, ram_enabled{false}, rom_data{data}, ram_data{} 
+{}
 
 uint8_t Mbc1::read_byte(uint16_t addr) {
 	// rom 
@@ -22,6 +25,7 @@ uint8_t Mbc1::read_byte(uint16_t addr) {
 	if (addr >= BANK1_BASE && addr <= BANK1_END) {
 		return rom_data[addr];
 	}
+
 	// Bank 0x1-0x7F - 0x4000 - 0x7FFF
 	else if (addr >= BANK2_BASE && addr <= BANK2_END) {
 		return rom_data[addr * rom_bank_sel];
@@ -42,14 +46,16 @@ void Mbc1::write_byte(uint16_t addr, uint8_t value) {
 		ram_enabled = ((value & 0xF) == 0xA);
 		return;
 	}
+
 	// select rom bank
 	if (addr >= ROM_REG_BASE && addr <= ROM_REG_END) {
 		rom_bank_sel = (value & 0x1F);
 		if (rom_bank_sel == 0) rom_bank_sel = 1;
 		return;
 	}
+
 	// select ram bank
-	if (addr >= RAM_REG_BASE && addr <= RAM_REG_BASE) {
+	if (addr >= RAM_REG_BASE && addr <= RAM_REG_END) {
 		ram_bank_sel = (value & 0x3);
 	}
 

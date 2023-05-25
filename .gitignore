@@ -270,3 +270,4 @@ Microboy/Microboy.vcxproj
 .vscode/
 subprojects/
 roms/
+.cache/

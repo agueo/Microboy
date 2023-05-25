@@ -1,9 +1,11 @@
-#pragma once
+#ifndef _MemoryBus_H_
+#define _MemoryBus_H_
 
 #include <array>
 #include "Cartridge.h"
 #include "InterruptObserver.h"
 #include "JoyPad.h"
+#include "Ppu.h"
 #include "Timer.h"
 
 // constant ranges
@@ -30,17 +32,6 @@ constexpr int HRAM_END	= 0xFFFE;
 // Serial
 constexpr int SB_ADDR = 0xFF01;
 constexpr int SC_ADDR = 0xFF02;
-// LCD
-constexpr int LCDC_ADDR = 0xFF40;
-constexpr int STAT_ADDR = 0xFF41;
-constexpr int SCY_ADDR = 0xFF42;
-constexpr int SCX_ADDR = 0xFF43;
-constexpr int LY_ADDR = 0xFF44;
-constexpr int LYC_ADDR = 0xFF45; 
-constexpr int DMA_ADDR = 0xFF46;
-constexpr int BGP_ADDR = 0xFF47;
-constexpr int WY_ADDR = 0xFF4A;
-constexpr int WX_ADDR = 0xFF4B;
 // Skipping sound registers - TODO
 
 class MemoryBus {
@@ -48,10 +39,10 @@ public:
 	MemoryBus();
 	~MemoryBus() = default;
 	void reset();
-
 	void load_cart(std::unique_ptr<Cartridge> c);
 	void connect_interrupt_observer(std::shared_ptr<InterruptObserver> observer);
 	void connect_joypad(std::shared_ptr<JoyPad> joypad);
+	void connect_ppu(std::shared_ptr<Ppu> ppu);
 	void connect_timer(std::shared_ptr<Timer> timer);
 
 	uint8_t read_byte(uint16_t addr);
@@ -59,20 +50,22 @@ public:
 	void write_byte(uint16_t addr, uint8_t value);
 	void write_word(uint16_t addr, uint16_t value);
 
-	std::vector<uint8_t> vram; // this will belong to the ppu
 private:
+
+	void request_dma_transfer(uint8_t src);
 	std::vector<uint8_t> wram;
-	std::vector<uint8_t> oam; // this will belong to the ppu
 	std::vector<uint8_t> IO; // TODO - put this in it's own thing eventually
 	std::vector<uint8_t> hram;
 
-	std::unique_ptr<Cartridge> cart;
-	std::shared_ptr<JoyPad> m_joypad;
-	std::shared_ptr<Timer> m_timer;
-	std::shared_ptr<InterruptObserver> m_int_observer;
+	std::unique_ptr<Cartridge> cart{nullptr};
+	std::shared_ptr<JoyPad> m_joypad{nullptr};
+	std::shared_ptr<Timer> m_timer{nullptr};
+	std::shared_ptr<InterruptObserver> m_int_observer{nullptr};
+	std::shared_ptr<Ppu> m_ppu{nullptr};
 
-	// std::shared_ptr<Ppu> m_ppu;
 	// enhancement: have a map for objects that want to register their high and low addr areas and a callback
 	// or create a radix tree for these callbacks
 	// Maybe most helpful for the IO space
 };
+
+#endif

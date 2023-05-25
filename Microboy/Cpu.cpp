@@ -86,7 +86,6 @@ int Cpu::step(int cycles) {
 		fetch();
 		cycles_taken += decode();
 		cycles_taken += execute();
-		//debug_print(*this);
 	}
 
 	return cycles_taken;
