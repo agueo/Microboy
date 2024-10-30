@@ -76,5 +76,5 @@ void JoyPad::handle_release(JoyPadInput input){
         select_action();
         break;
     }
-    m_int_obs->schedule_interrupt(InterruptSource::JOYPAD);
+    //m_int_obs->schedule_interrupt(InterruptSource::JOYPAD);
 }

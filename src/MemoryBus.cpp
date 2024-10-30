@@ -1,4 +1,4 @@
-#include <fmt/core.h>
+// #include <fmt/core.h>
 #include "InterruptObserver.h"
 #include "JoyPad.h"
 #include "Lcd.h"
@@ -171,7 +171,7 @@ void MemoryBus::write_byte(uint16_t addr, uint8_t value) {
 			break;
 		}
         if (addr == SB_ADDR) {
-            fmt::print("{:c}", value);
+            //fmt::print("{:c}", value);
         }
     }
     else if (addr >= OAM_BASE && addr <= OAM_END) {

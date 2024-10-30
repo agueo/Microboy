@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+
 #include "common.h"
 #include "InterruptObserver.h"
 #include "Lcd.h"

@@ -4,7 +4,7 @@
 #include "MemoryBus.h"
 #include "Ppu.h"
 
-#include <fmt/core.h>
+//#include <fmt/core.h>
 #include <vector>
 
 const std::vector<uint32_t> gPalette{0x89d795FF, 0x629A6AFF, 0x3B5C40FF, 0x141F15FF};
@@ -12,13 +12,13 @@ const std::vector<uint32_t> gPalette{0x89d795FF, 0x629A6AFF, 0x3B5C40FF, 0x141F1
 Ppu::Ppu() 
     : frame_ready{false}, LX{0}, m_vram_blocked{false}, m_oam_blocked{false}, m_dots{0}, 
     m_mode{LcdMode::HBLANK}, m_lcd{}, m_vram(0x2000, 0), m_oam(0xA0, 0), 
-    m_pixel_fifo{0}, m_oam_fifo{0}, m_bus{}, m_frame_buffer(WIDTH*HEIGHT, 0), 
+    m_pixel_fifo{0}, m_oam_fifo{0}, m_bus{}, m_frame_buffer(dmg::WIDTH * dmg::HEIGHT, 0), 
     m_int_observer{nullptr} {}
 
 bool Ppu::step(int cycles) {
     // cycles are in T cycles,
     frame_ready = false;
-    for (int i = 0; i < cycles; i += 4) {
+    for (int i = 0; i < cycles; ++i) {
         switch(m_mode) {
             case LcdMode::HBLANK:
                 ppu_mode_hblank();
@@ -157,6 +157,7 @@ void Ppu::ppu_switch_mode(LcdMode next) {
     case LcdMode::DATA_TRANSFER:
         m_mode = LcdMode::DATA_TRANSFER;
         // TODO - initialize pixel fifo
+        // this is when we draw pixels
         break;
     case LcdMode::OAM_SEARCH:
         m_mode = LcdMode::OAM_SEARCH;
@@ -231,24 +232,22 @@ void Ppu::pixel_fetcher_tick() {
     uint8_t color_val = 0;
     uint32_t color = 0;
 
-    while (++LX <= WIDTH) {
-        tile_no = bus->read_byte(tilemap + ((offy / 8 * 32) + (offx / 8)));
-        if (tiledata == 0x8800) {
-            color_val = (
-                bus->read_byte(tiledata + 0x800 + ((int8_t)tile_no * 0x10) + (offy % 8 * 2)) >> (7 - (offx % 8)) & 0x1) 
-                + ((bus->read_byte(tiledata + 0x800 + ((int8_t)tile_no * 0x10) + (offy % 8 * 2) + 1) >> (7 - (offx % 8)) & 0x1) * 2);
-        } else {
-            color_val = (
-                bus->read_byte(tiledata + 0x800 + ((int8_t)tile_no * 0x10) + (offy % 8 * 2)) >> (7 - (offx % 8)) & 0x1) 
-                + ((bus->read_byte(tiledata + 0x800 + ((int8_t)tile_no * 0x10) + (offy % 8 * 2) + 1) >> (7 - (offx % 8)) & 0x1) * 2);
-        }
-        color = gPalette[(m_lcd.BGP >> (2 * color_val)) & 3];
-        m_frame_buffer[m_lcd.LY * WIDTH + offx] = color;
-
-        offx = LX + m_lcd.SCX;
-        offy = m_lcd.LY + m_lcd.SCY;  
+    tile_no = bus->read_byte(tilemap + ((offy / 8 * 32) + (offx / 8)));
+    if (tiledata == 0x8800) {
+        color_val = (
+            bus->read_byte(tiledata + 0x800 + ((int8_t)tile_no * 0x10) + (offy % 8 * 2)) >> (7 - (offx % 8)) & 0x1) 
+            + ((bus->read_byte(tiledata + 0x800 + ((int8_t)tile_no * 0x10) + (offy % 8 * 2) + 1) >> (7 - (offx % 8)) & 0x1) * 2);
+    } else {
+        color_val = (
+            bus->read_byte(tiledata + 0x800 + ((int8_t)tile_no * 0x10) + (offy % 8 * 2)) >> (7 - (offx % 8)) & 0x1) 
+            + ((bus->read_byte(tiledata + 0x800 + ((int8_t)tile_no * 0x10) + (offy % 8 * 2) + 1) >> (7 - (offx % 8)) & 0x1) * 2);
     }
-    LX = 0;
-    ppu_switch_mode(LcdMode::HBLANK);
+    color = gPalette[(m_lcd.BGP >> (2 * color_val)) & 3];
+    m_frame_buffer[m_lcd.LY * dmg::WIDTH + offx] = color;
+
+    if (++LX > dmg::WIDTH) {
+        LX = 0;
+        ppu_switch_mode(LcdMode::HBLANK);
+    }
 }
 

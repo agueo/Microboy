@@ -1,5 +1,5 @@
 #include <memory>
-#include <fmt/core.h>
+// #include <fmt/core.h>
 #include "InterruptObserver.h"
 
 constexpr int NUM_INTERRUPTS = 5;

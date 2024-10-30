@@ -1,6 +1,6 @@
 #include "Opcode.h"
 #include "Cpu.h"
-#include <fmt/core.h>
+// #include <fmt/core.h>
 
 /*--------------------------------------------------*/
 /* Helper functions									*/
@@ -25,12 +25,12 @@ inline bool calc_8_bit_hborrow(uint8_t byte1, uint8_t byte2, uint8_t carry= 0) {
 /* Opcode handlers									*/
 /*--------------------------------------------------*/
 inline int Unimplemented_Opcode(uint8_t opcode) {
-	fmt::print("unimplemented opcode {:#02x}: {}", opcode, CYCLE_TABLE_DEBUG[opcode].name);
+	//fmt::print("unimplemented opcode {:#02x}: {}", opcode, CYCLE_TABLE_DEBUG[opcode].name);
 	exit(-1);
 }
 
 inline int Unimplemented_Opcode_CB(uint8_t opcode) {
-	fmt::print("unimplemented opcode {:#02x}: {}", opcode, CYCLE_TABLE_DEBUG_CB[opcode].name);
+	//fmt::print("unimplemented opcode {:#02x}: {}", opcode, CYCLE_TABLE_DEBUG_CB[opcode].name);
 	exit(-1);
 }
 
@@ -515,7 +515,7 @@ int Cpu::handle_opcode() {
 		// don't know what this does for the DMG but could be used in the GBC
 		// for now treat as halt and just loop forever
 		m_halted = true;
-		fmt::print("Hit Stop\n");
+		//fmt::print("Hit Stop\n");
 		break;
 	}
 	// DAA

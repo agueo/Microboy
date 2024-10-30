@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string>
 
-#include <fmt/core.h>
+// #include <fmt/core.h>
 
 #include "Cartridge.h"
 #include "Mbc0.h"
@@ -31,12 +31,12 @@ std::unique_ptr<Cartridge> system_load_rom(const std::string &filename) {
 		return nullptr;
 	}
 	std::vector<uint8_t> rom_data((std::istreambuf_iterator<char>(rom)), std::istreambuf_iterator<char>());
-	fmt::print("file size: {:#04x}\n", rom_data.size());
+	//fmt::print("file size: {:#04x}\n", rom_data.size());
 	auto cart_settings = parse_header(rom_data);
-	fmt::print("Cartridge Title: {}\n", cart_settings.title);
-	fmt::print("Cartridge Type: {}\n", cartridge_types[static_cast<uint8_t>(cart_settings.type)]);
-	fmt::print("Cartridge Rom Size: {}\n", rom_sizes_str[static_cast<uint8_t>(cart_settings.rom_size)]);
-	fmt::print("Cartridge Ram Size: {}\n", ram_sizes_str[static_cast<uint8_t>(cart_settings.ram_size)]);
+	//fmt::print("Cartridge Title: {}\n", cart_settings.title);
+	//fmt::print("Cartridge Type: {}\n", cartridge_types[static_cast<uint8_t>(cart_settings.type)]);
+	//fmt::print("Cartridge Rom Size: {}\n", rom_sizes_str[static_cast<uint8_t>(cart_settings.rom_size)]);
+	//fmt::print("Cartridge Ram Size: {}\n", ram_sizes_str[static_cast<uint8_t>(cart_settings.ram_size)]);
 
 	// TODO - create a cart builder
 	switch(cart_settings.type) {

@@ -20,7 +20,7 @@ constexpr int JOYP_ADDR = 0xFF00;
 
 class JoyPad {
 public:
-    void reset() { m_joyp = 0xCF; }
+    void reset() { m_joyp = 0xFF; }
     void connect_interrupt_observer(std::shared_ptr<InterruptObserver> obs) { m_int_obs = obs; }
     void handle_press(JoyPadInput input);
     void handle_release(JoyPadInput input);
