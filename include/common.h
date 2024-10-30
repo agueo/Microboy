@@ -16,4 +16,16 @@ constexpr int SCREEN_HEIGHT = HEIGHT * SCALE;
 
 };
 
+// helper methods for common bitwise ops
+uint8_t low_uint8_t(uint16_t data);
+uint8_t high_uint8_t(uint16_t data);
+uint8_t low_nibble(uint8_t data);
+uint8_t high_nibble(uint8_t data);
+
+bool is_between(uint16_t value, uint16_t begin, uint16_t end);
+uint16_t combine(uint8_t low, uint8_t high);
+bool is_bit_set(uint8_t data, uint8_t bit);
+uint8_t set_bit(uint8_t data, uint8_t bit);
+uint8_t clear_bit(uint8_t data, uint8_t bit);
+
 #endif
