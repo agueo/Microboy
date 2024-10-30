@@ -210,7 +210,7 @@ void Ppu::ppu_mode_oam_search() {
     m_oam_blocked = true;
     // OAM buffer can only have 10 objects
     // Do oam fetch
-
+    // TODO - need an array for sprite data
     if (++m_dots == 80) {
         ppu_switch_mode(LcdMode::DATA_TRANSFER);
     }
