@@ -226,24 +226,35 @@ void Ppu::pixel_fetcher_tick() {
     auto bus = m_bus.lock();
     uint16_t tilemap = m_lcd.lcdc_bg_tilemap() ? 0x9c00 : 0x9800;
     uint16_t tiledata = m_lcd.lcdc_bg_tile_data() ? 0x8000 : 0x8800;
-    uint8_t offy = m_lcd.LY + m_lcd.SCY;  
-    uint8_t offx = LX + m_lcd.SCX;  
-    uint8_t tile_no = 0;
-    uint8_t color_val = 0;
-    uint32_t color = 0;
 
-    tile_no = bus->read_byte(tilemap + ((offy / 8 * 32) + (offx / 8)));
-    if (tiledata == 0x8800) {
-        color_val = (
-            bus->read_byte(tiledata + 0x800 + ((int8_t)tile_no * 0x10) + (offy % 8 * 2)) >> (7 - (offx % 8)) & 0x1) 
-            + ((bus->read_byte(tiledata + 0x800 + ((int8_t)tile_no * 0x10) + (offy % 8 * 2) + 1) >> (7 - (offx % 8)) & 0x1) * 2);
+    uint8_t tilemap_row = ((m_lcd.LY + m_lcd.SCY) / 8) % 32;
+    uint8_t pixel_y = (m_lcd.LY + m_lcd.SCY) % 8;
+
+    uint8_t tilemap_col = ((LX + m_lcd.SCX) / 8) % 32;
+
+    // tile index
+    uint16_t tilemap_addr = tilemap + tilemap_row * 32 + tilemap_col;
+
+    uint16_t tile_addr = 0;
+    if (tiledata == 0x8000) {
+        uint8_t tile_index = bus->read_byte(tilemap_addr);
+        tile_addr = tiledata + (tile_index * 16);
     } else {
-        color_val = (
-            bus->read_byte(tiledata + 0x800 + ((int8_t)tile_no * 0x10) + (offy % 8 * 2)) >> (7 - (offx % 8)) & 0x1) 
-            + ((bus->read_byte(tiledata + 0x800 + ((int8_t)tile_no * 0x10) + (offy % 8 * 2) + 1) >> (7 - (offx % 8)) & 0x1) * 2);
+        int8_t tile_index = bus->read_byte(tilemap_addr);
+        // tilesize = 16
+        tile_addr = tiledata + (tile_index * 16);
     }
-    color = gPalette[(m_lcd.BGP >> (2 * color_val)) & 3];
-    m_frame_buffer[m_lcd.LY * dmg::WIDTH + offx] = color;
+
+    uint8_t tile_row_data = (bus->read_byte(tile_addr + pixel_y * 2 + 1) << 1) | bus->read_byte(tile_addr + pixel_y * 2);
+
+    int pixel_x = (LX + m_lcd.SCX) % 8;
+
+    uint8_t color_val = (tile_row_data >> (7 - pixel_x)) & 0x03;
+
+    // correct
+    uint32_t color = gPalette[(m_lcd.BGP >> (2 * color_val)) & 3];
+    // TODO - check me
+    m_frame_buffer[m_lcd.LY * dmg::WIDTH + LX] = color;
 
     if (++LX > dmg::WIDTH) {
         LX = 0;

@@ -63,38 +63,37 @@ void JoyPad::handle_release(JoyPadInput input){
     switch(input) {
     case JoyPadInput::DOWN:
         m_dir_button = set_bit(m_dir_button, 3);
-        select_dir();
+        m_joyp = set_bit(m_joyp, 4);
         break;
     case JoyPadInput::UP:
         m_dir_button = set_bit(m_dir_button, 2);
-        select_dir();
+        m_joyp = set_bit(m_joyp, 4);
         break;
     case JoyPadInput::LEFT:
         m_dir_button = set_bit(m_dir_button, 1);
-        select_dir();
+        m_joyp = set_bit(m_joyp, 4);
         break;
     case JoyPadInput::RIGHT:
         m_dir_button = set_bit(m_dir_button, 0);
-        select_dir();
+        m_joyp = set_bit(m_joyp, 4);
         break;
     case JoyPadInput::START:
         m_action_button = set_bit(m_action_button, 3);
-        select_action();
+        m_joyp = set_bit(m_joyp, 5);
         break;
     case JoyPadInput::SELECT:
         m_action_button = set_bit(m_action_button, 2);
-        select_action();
+        m_joyp = set_bit(m_joyp, 5);
         break;
     case JoyPadInput::A:
         m_action_button = set_bit(m_action_button, 1);
-        select_action();
+        m_joyp = set_bit(m_joyp, 5);
         break;
     case JoyPadInput::B:
         m_action_button = set_bit(m_action_button, 0);
-        select_action();
+        m_joyp = set_bit(m_joyp, 5);
         break;
     }
-    m_int_obs->schedule_interrupt(InterruptSource::JOYPAD);
 }
 
 uint8_t JoyPad::read_byte() {

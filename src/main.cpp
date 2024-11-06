@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
 	// control flags
 	bool running{ true };
 	bool rom_loaded{ true };
-    bool draw_frame {false};
+	bool draw_frame { false };
 	sf::Event event;
 
 	// reset the system
@@ -160,9 +160,9 @@ int main(int argc, char **argv) {
 			game_window.draw(bgsprite);
 			game_window.display();
 			draw_frame = false;
+		} else {
+			sf::sleep(sf::milliseconds(10));
 		}
-
 	}
-
 	return 0;
 }
