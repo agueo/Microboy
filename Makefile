@@ -1,5 +1,5 @@
 CXX = g++
-CXX_FLAGS= -std=c++20 -Wall -Iinclude -g
+CXX_FLAGS= -std=c++20 -Wall -Werror -Wpedantic -Iinclude -g
 
 # LDFLAGS would have the -L<install_path>
 LDFLAGS = 

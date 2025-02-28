@@ -1,4 +1,5 @@
-#pragma once
+#ifndef CARTRIDGE_H
+#define CARTRIDGE_H
 
 #include <memory>
 #include <string>
@@ -104,3 +105,5 @@ public:
 std::unique_ptr<Cartridge> system_load_rom(const std::string &filename);
 
 CartridgeSettings parse_header(const std::vector<uint8_t> &data);
+
+#endif

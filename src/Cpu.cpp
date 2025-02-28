@@ -71,11 +71,17 @@ int Cpu::step(int cycles) {
 		// handle interrupts and halt
 		// interrupt handler
 		if (ime_enable) {
-			if(ei_delay == 0) {
+			switch (ei_delay){
+			case 2:
+				ei_delay = 1;
+				break;
+			case 1:
+				ei_delay = 0;
 				ime_enable = false;
 				IME = true;
-			} else {
-				--ei_delay;
+				break;
+			default:
+				break;
 			}
 		}
 		cycles_taken += service_interrupt();

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MBC0_H
+#define MBC0_H
 #include <vector>
 
 #include "Cartridge.h"
@@ -16,3 +17,4 @@ private:
 	std::vector<uint8_t> rom_data;
 };
 
+#endif

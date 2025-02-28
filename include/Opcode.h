@@ -1,4 +1,6 @@
-#pragma once
+#ifndef OPCODE_H
+#define OPCODE_H
+
 #include <string>
 #include "common.h"
 
@@ -50,3 +52,4 @@ static const Opcode CYCLE_TABLE_DEBUG_CB[0x100] = {
 	{"SET 6,B","x8/rsb","----",2,8,8}, {"SET 6,C","x8/rsb","----",2,8,8}, {"SET 6,D","x8/rsb","----",2,8,8}, {"SET 6,E","x8/rsb","----",2,8,8}, {"SET 6,H","x8/rsb","----",2,8,8}, {"SET 6,L","x8/rsb","----",2,8,8}, {"SET 6,(HL)","x8/rsb","----",2,16,16}, {"SET 6,A","x8/rsb","----",2,8,8}, {"SET 7,B","x8/rsb","----",2,8,8}, {"SET 7,C","x8/rsb","----",2,8,8}, {"SET 7,D","x8/rsb","----",2,8,8}, {"SET 7,E","x8/rsb","----",2,8,8}, {"SET 7,H","x8/rsb","----",2,8,8}, {"SET 7,L","x8/rsb","----",2,8,8}, {"SET 7,(HL)","x8/rsb","----",2,16,16}, {"SET 7,A","x8/rsb","----",2,8,8},
 };
 
+#endif

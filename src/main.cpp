@@ -2,6 +2,7 @@
 #include <array>
 #include <cassert>
 #include <iostream>
+#include <memory>
 #include <random>
 #include <vector>
 
@@ -49,7 +50,7 @@ int main(int argc, char **argv) {
 	
 	// control flags
 	bool running{ true };
-	bool rom_loaded{ true };
+	bool rom_loaded{ false };
 	bool draw_frame { false };
 	sf::Event event;
 
@@ -63,90 +64,44 @@ int main(int argc, char **argv) {
 		const std::string rom_name {argv[1]};
 		bus->load_cart(system_load_rom(rom_name));
 	} else {
-		bus->load_cart(system_load_rom("./roms/tetris.gb"));
+		bus->load_cart(system_load_rom("./roms/dmg-acid2.gb"));
 	}
+	rom_loaded = true;
 
 	// game loop
 	while (running) {
-		while (game_window.pollEvent(event)) {
-			switch (event.type) {
-				case sf::Event::Closed:
-					game_window.close();
-					running = false;
-					break;
-				case sf::Event::KeyPressed:
-					switch (event.key.code) {
-						case sf::Keyboard::W:
-							joypad->handle_press(JoyPadInput::UP);
-							break;
-						case sf::Keyboard::A:
-							joypad->handle_press(JoyPadInput::LEFT);
-							break;
-						case sf::Keyboard::S:
-							joypad->handle_press(JoyPadInput::DOWN);
-							break;
-						case sf::Keyboard::D:
-							joypad->handle_press(JoyPadInput::RIGHT);
-							break;
-						case sf::Keyboard::LControl:
-							joypad->handle_press(JoyPadInput::START);
-							break;
-						case sf::Keyboard::Space:
-							joypad->handle_press(JoyPadInput::SELECT);
-							break;
-						case sf::Keyboard::J:
-							joypad->handle_press(JoyPadInput::A);
-							break;
-						case sf::Keyboard::K:
-							joypad->handle_press(JoyPadInput::B);
-							break;
-						default:
-							break;
-					}
-					break;
-				case sf::Event::KeyReleased:
-					switch (event.key.code) {
-						case sf::Keyboard::W:
-							joypad->handle_press(JoyPadInput::UP);
-							break;
-						case sf::Keyboard::A:
-							joypad->handle_press(JoyPadInput::LEFT);
-							break;
-						case sf::Keyboard::S:
-							joypad->handle_press(JoyPadInput::DOWN);
-							break;
-						case sf::Keyboard::D:
-							joypad->handle_press(JoyPadInput::RIGHT);
-							break;
-						case sf::Keyboard::LControl:
-							joypad->handle_press(JoyPadInput::START);
-							break;
-						case sf::Keyboard::Space:
-							joypad->handle_press(JoyPadInput::SELECT);
-							break;
-						case sf::Keyboard::J:
-							joypad->handle_press(JoyPadInput::A);
-							break;
-						case sf::Keyboard::K:
-							joypad->handle_press(JoyPadInput::B);
-							break;
-						default:
-							break;
-					}
-					break;
-				default:
-					break;
-			}
+		game_window.pollEvent(event);
+		if (event.type == sf::Event::Closed) {
+			running = false;
+			break;
+		}
+		switch (event.type) {
+			case sf::Event::KeyPressed:
+				handle_key_pressed(event, joypad);
+				break;
+			case sf::Event::KeyReleased:
+				handle_key_released(event, joypad);
+				break;
+			default:
+				break;
 		}
 
-		// Render
-
 		// run gameboy only if game is loaded
-		if (rom_loaded) {
-			int cycles_ran = cpu.step(dmg::CYCLES_PER_FRAME);
+		if (!rom_loaded) {
+			fmt::print("Failed to run because no game loaded!");
+			break;
+		}
+
+		int cycle_count = 0;
+		
+		while (cycle_count < dmg::CYCLES_PER_FRAME) {
+			int cycles_ran = cpu.step(dmg::CYCLE_STEP);
+			cycle_count += cycles_ran;
 			timer->step(cycles_ran);
 			draw_frame = ppu->step(cycles_ran);
 		}
+		cycle_count = 0;
+		// Render
 		if (draw_frame) {
 			game_window.clear();
 			// update texture
@@ -164,5 +119,7 @@ int main(int argc, char **argv) {
 			sf::sleep(sf::milliseconds(10));
 		}
 	}
+
+	game_window.close();
 	return 0;
 }

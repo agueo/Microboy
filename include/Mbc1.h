@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MBC1_H
+#define MBC1_H
 #include "Cartridge.h"
 
 class Mbc1 : public Cartridge {
@@ -16,3 +17,4 @@ private:
 	std::vector<uint8_t> ram_data{};
 };
 
+#endif
