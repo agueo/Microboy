@@ -11,6 +11,12 @@
 
 class MemoryBus;
 
+constexpr int SCAN_LINE_CYCLES = 456;
+constexpr int OAM_CYCLES = 80;
+constexpr int VBLANK_LINES = 10;
+constexpr int PIXEL_TRANSFER_CYCLES = 172;
+constexpr int HBLANK_CYCLES = 204;
+
 class Ppu {
 public:
     Ppu();
@@ -31,13 +37,13 @@ public:
 private:
     void request_dma_transfer(uint8_t addr);
     void ppu_switch_mode(LcdMode);
-    void ppu_mode_hblank();
-    void ppu_mode_vblank();
-    void ppu_mode_data_xfer();
-    void ppu_mode_oam_search();
+    int ppu_mode_hblank(int cycles);
+    int ppu_mode_vblank(int cycles);
+    int ppu_mode_data_xfer(int cycles);
+    int ppu_mode_oam_search(int cycles);
     void pixel_fetcher_tick();
 
-    bool frame_ready{false};
+    bool m_frame_ready{false};
     uint16_t LX{0};
     uint16_t WLY{0};
     bool m_vram_blocked{false};
@@ -50,6 +56,7 @@ private:
 	std::vector<uint8_t> m_oam{};
 
     std::vector<uint8_t> m_pixel_fifo{};
+    // TODO see if we need this
     std::vector<OamAttribute> m_oam_fifo{};
 
     std::weak_ptr<MemoryBus> m_bus{};
@@ -59,5 +66,4 @@ private:
     std::shared_ptr<InterruptObserver> m_int_observer{};
 };
 
-// TODO Pixel FIFO 
 #endif

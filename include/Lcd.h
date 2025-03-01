@@ -2,6 +2,8 @@
 #define _LCD_H_
 #include <cstdint>
 
+#include "common.h"
+
 enum class LcdMode {
     HBLANK,
     VBLANK,
@@ -26,14 +28,14 @@ constexpr int WX_ADDR = 0xFF4B;
 // reference PANDOCS on whether registers are R/W
 struct Lcd {
     // LCDC functions
-    bool lcdc_lcd_enabled()    { return ((LCDC >> 7) & 1) == 1; } // bit 7
-    bool lcdc_window_tilemap() { return ((LCDC >> 6) & 1) == 1; } // bit 6
-    bool lcdc_window_enable()  { return ((LCDC >> 6) & 1) == 1; } // bit 5
-    bool lcdc_bg_tile_data()   { return ((LCDC >> 4) & 1) == 1; } // bit 4
-    bool lcdc_bg_tilemap()     { return ((LCDC >> 3) & 1) == 1; } // bit 3
-    bool lcdc_obj_size()       { return ((LCDC >> 2) & 1) == 1; } // bit 2
-    bool lcdc_obj_enable()     { return ((LCDC >> 1) & 1) == 1; } // bit 1
-    bool lcdc_bg_enable_pri()  { return ((LCDC) & 1) == 1; } // bit 0
+    bool lcdc_lcd_enabled()    { return is_bit_set(LCDC, 7); }// ((LCDC >> 7) & 1) == 1; } // bit 7
+    bool lcdc_window_tilemap() { return is_bit_set(LCDC, 6); }// ((LCDC >> 6) & 1) == 1; } // bit 6
+    bool lcdc_window_enable()  { return is_bit_set(LCDC, 5); }// ((LCDC >> 6) & 1) == 1; } // bit 5
+    bool lcdc_bg_tile_data()   { return is_bit_set(LCDC, 4); }// ((LCDC >> 4) & 1) == 1; } // bit 4
+    bool lcdc_bg_tilemap()     { return is_bit_set(LCDC, 3); }// ((LCDC >> 3) & 1) == 1; } // bit 3
+    bool lcdc_obj_size()       { return is_bit_set(LCDC, 2); }// ((LCDC >> 2) & 1) == 1; } // bit 2
+    bool lcdc_obj_enable()     { return is_bit_set(LCDC, 1); }// ((LCDC >> 1) & 1) == 1; } // bit 1
+    bool lcdc_bg_enable_pri()  { return is_bit_set(LCDC, 0); }// ((LCDC) & 1) == 1; } // bit 0
 
     // Stat register
     LcdMode stat_get_lcd_mode() { return static_cast<LcdMode>(STAT & 0x3); }
@@ -41,13 +43,13 @@ struct Lcd {
         STAT &= 0xFC;
         STAT |= static_cast<uint8_t>(mode);
     } 
-    bool stat_get_lyc_int_enabled() { return ((STAT >> 6) & 1) == 1; }
-    bool stat_get_oam_int_enabled() { return ((STAT >> 5) & 1) == 1; }
-    bool stat_get_vblank_int_enabled() { return ((STAT >> 4) & 1) == 1; }
-    bool stat_get_hblank_int_enabled() { return ((STAT >> 3) & 1) == 1; }
+    bool stat_get_lyc_int_enabled() { return is_bit_set(STAT, 6); }// ((STAT >> 6) & 1) == 1; }
+    bool stat_get_oam_int_enabled() { return is_bit_set(STAT, 5); }// ((STAT >> 5) & 1) == 1; }
+    bool stat_get_vblank_int_enabled() { return is_bit_set(STAT, 4); }//((STAT >> 4) & 1) == 1; }
+    bool stat_get_hblank_int_enabled() { return is_bit_set(STAT, 3); }//((STAT >> 3) & 1) == 1; }
     bool stat_ly_compare() { 
         if (LY == LYC) {
-            STAT |= 1 << 2;
+            STAT = set_bit(STAT, 2); //|= 1 << 2;
             return true;
         }
         STAT &= ~(1 << 2);

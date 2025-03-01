@@ -4,37 +4,49 @@
 #include "MemoryBus.h"
 #include "Ppu.h"
 
-//#include <fmt/core.h>
 #include <vector>
 
-const std::vector<uint32_t> gPalette{0x89d795FF, 0x629A6AFF, 0x3B5C40FF, 0x141F15FF};
+const std::vector<uint32_t> gPalette{0xff89d795, 0xff629A6A, 0xff3B5C40, 0xff141F15};
+//const std::vector<uint32_t> gPalette{0xff9a9e3f, 0xff496b22, 0xff0e450b, 0xff1b2a09};
 
-Ppu::Ppu() 
-    : frame_ready{false}, LX{0}, m_vram_blocked{false}, m_oam_blocked{false}, m_dots{0}, 
-    m_mode{LcdMode::HBLANK}, m_lcd{}, m_vram(0x2000, 0), m_oam(0xA0, 0), 
-    m_pixel_fifo{0}, m_oam_fifo{0}, m_bus{}, m_frame_buffer(dmg::WIDTH * dmg::HEIGHT, 0), 
-    m_int_observer{nullptr} {}
+Ppu::Ppu()
+: m_frame_ready{false},
+  LX{0},
+  WLY{0},
+  m_vram_blocked{false},
+  m_oam_blocked{false},
+  m_dots{0},
+  m_mode{LcdMode::HBLANK},
+  m_lcd{},
+  m_vram(0x2000, 0),
+  m_oam(0xA0, 0),
+  m_pixel_fifo{0},
+  m_oam_fifo{0},
+  m_bus{},
+  m_frame_buffer(dmg::WIDTH * dmg::HEIGHT, 0),
+  m_int_observer{nullptr} {}
 
+// TODO - FIXME Change this function to not run in a loop ??
 bool Ppu::step(int cycles) {
     // cycles are in T cycles,
-    frame_ready = false;
-    for (int i = 0; i < cycles; ++i) {
+    m_frame_ready = false;
+    while (cycles > 0) {
         switch(m_mode) {
             case LcdMode::HBLANK:
-                ppu_mode_hblank();
+                cycles = ppu_mode_hblank(cycles);
                 break;
             case LcdMode::VBLANK:
-                ppu_mode_vblank();
+                cycles = ppu_mode_vblank(cycles);
                 break;
             case LcdMode::OAM_SEARCH:
-                ppu_mode_oam_search();
+                cycles = ppu_mode_oam_search(cycles);
                 break;
             case LcdMode::DATA_TRANSFER:
-                ppu_mode_data_xfer();
+                cycles = ppu_mode_data_xfer(cycles);
                 break;
         }
     }
-    return frame_ready;
+    return m_frame_ready;
 }
 
 void Ppu::reset() {
@@ -81,7 +93,7 @@ uint8_t Ppu::read_byte(uint16_t addr) {
         return m_lcd.OBP1;
     } else if (addr == WY_ADDR) {
         return m_lcd.WY;
-    } else if (addr == WX_ADDR) {    
+    } else if (addr == WX_ADDR) {
         return m_lcd.WX;
     } else if (addr >= VRAM_BASE && addr <= VRAM_END) {
         if (m_vram_blocked) return 0xFF;
@@ -130,7 +142,6 @@ void Ppu::write_byte(uint16_t addr, uint8_t value) {
 }
 
 void Ppu::request_dma_transfer(uint8_t addr) {
-    (void)addr;
     // TODO make this play well with the timing
     uint16_t source_addr = addr * 0x100;
     auto p = m_bus.lock();
@@ -145,24 +156,26 @@ void Ppu::ppu_switch_mode(LcdMode next) {
     bool stat_int{false};
     switch(next) {
     case LcdMode::HBLANK:
-        frame_ready = true;
         m_mode = LcdMode::HBLANK;
+        m_vram_blocked = false;
+        m_oam_blocked = false;
         stat_int = m_lcd.stat_get_hblank_int_enabled();
         break;
     case LcdMode::VBLANK:
+        m_frame_ready = true;
         m_mode = LcdMode::VBLANK;
         m_int_observer->schedule_interrupt(InterruptSource::VBLANK);
         stat_int = m_lcd.stat_get_vblank_int_enabled();
         break;
     case LcdMode::DATA_TRANSFER:
         m_mode = LcdMode::DATA_TRANSFER;
-        // TODO - initialize pixel fifo
-        // this is when we draw pixels
+        m_vram_blocked = true;
         break;
     case LcdMode::OAM_SEARCH:
+        m_oam_blocked = true;
         m_mode = LcdMode::OAM_SEARCH;
-        // TODO - clear oam_buffer;
         m_oam_fifo.clear();
+        // TODO - check when the interrupt is fired
         stat_int = m_lcd.stat_get_oam_int_enabled();
         break;
     }
@@ -171,11 +184,11 @@ void Ppu::ppu_switch_mode(LcdMode next) {
     }
 }
 
-void Ppu::ppu_mode_hblank() {
-    m_vram_blocked = false;
-    m_oam_blocked = false;
+int Ppu::ppu_mode_hblank(int cycles) {
 
-    if (++m_dots == 204) {
+    int remaining_cycles = SCAN_LINE_CYCLES - (PIXEL_TRANSFER_CYCLES + OAM_CYCLES + m_dots);
+    if (cycles >= remaining_cycles) {
+        cycles -= remaining_cycles;
         m_dots = 0;
         ++m_lcd.LY;
         ++WLY;
@@ -191,35 +204,67 @@ void Ppu::ppu_mode_hblank() {
         } else {
             ppu_switch_mode(LcdMode::OAM_SEARCH);
         }
+    } else {
+        m_dots += cycles;
+        cycles = 0;
     }
+
+    return cycles;
 }
 
-void Ppu::ppu_mode_vblank() {
-    if (++m_dots == 456) {
+int Ppu::ppu_mode_vblank(int cycles) {
+    int remaining_cycles = SCAN_LINE_CYCLES - m_dots;
+    if (cycles >= remaining_cycles) {
+        cycles -= remaining_cycles;
         m_dots = 0;
-        ++m_lcd.LY;
-        if (m_lcd.LY > 153) {
+        if (++m_lcd.LY > dmg::HEIGHT + VBLANK_LINES) {
             m_lcd.LY = 0;
             WLY = 0;
             ppu_switch_mode(LcdMode::OAM_SEARCH);
         }
+    } else {
+        m_dots += cycles;
+        cycles = 0;
     }
+    return cycles;
 }
 
-void Ppu::ppu_mode_oam_search() {
-    m_oam_blocked = true;
-    // OAM buffer can only have 10 objects
-    // Do oam fetch
-    // TODO - need an array for sprite data
-    if (++m_dots == 80) {
+int Ppu::ppu_mode_oam_search(int cycles) {
+    int remaining_cycles = OAM_CYCLES - m_dots;
+    if (cycles >= remaining_cycles) {
+        // we have more cycles to run
+        // consume the cycles remaining and return the rest for other modes to run
+        cycles -= remaining_cycles;
+        m_dots = 0;
         ppu_switch_mode(LcdMode::DATA_TRANSFER);
+    } else {
+        // consume the cycles
+        m_dots += cycles;
+        cycles = 0;
     }
+    return cycles;
 }
 
-void Ppu::ppu_mode_data_xfer() {
-    // m_vram_blocked = true;
-    // Tick the fetcher to get the next few pixels
-    pixel_fetcher_tick();
+int Ppu::ppu_mode_data_xfer(int cycles) {
+    int remaining_cycles = PIXEL_TRANSFER_CYCLES - m_dots;
+    if (cycles >= remaining_cycles) {
+        // consume the remaining cycles
+        cycles -= remaining_cycles;
+        m_dots = 0;
+        while(LX <= dmg::WIDTH) {
+            // this function will change modes for us
+            pixel_fetcher_tick();
+            ++LX;
+        }
+        LX = 0;
+        ppu_switch_mode(LcdMode::HBLANK);
+    } else {
+        // consume some cycles
+        m_dots += cycles;
+        cycles = 0;
+    }
+    return cycles;
+    // TODO - do other stuff here for window and sprite
 }
 
 void Ppu::pixel_fetcher_tick() {
@@ -255,10 +300,4 @@ void Ppu::pixel_fetcher_tick() {
     uint32_t color = gPalette[(m_lcd.BGP >> (2 * color_val)) & 3];
     // TODO - check me
     m_frame_buffer[m_lcd.LY * dmg::WIDTH + LX] = color;
-
-    if (++LX > dmg::WIDTH) {
-        LX = 0;
-        ppu_switch_mode(LcdMode::HBLANK);
-    }
 }
-

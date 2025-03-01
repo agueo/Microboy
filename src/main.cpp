@@ -99,6 +99,7 @@ int main(int argc, char **argv) {
 			cycle_count += cycles_ran;
 			timer->step(cycles_ran);
 			draw_frame = ppu->step(cycles_ran);
+			if (draw_frame) break;
 		}
 		cycle_count = 0;
 		// Render
@@ -109,7 +110,7 @@ int main(int argc, char **argv) {
 			sf::Texture bg_texture;
 			sf::Sprite bgsprite;
 
-			bg.create(dmg::WIDTH, dmg::HEIGHT,  (const uint8_t *)ppu->get_frame_buffer());
+			bg.create(dmg::WIDTH, dmg::HEIGHT, (const uint8_t *)ppu->get_frame_buffer());
 			bg_texture.loadFromImage(bg);
 			bgsprite.setTexture(bg_texture);
 			game_window.draw(bgsprite);
