@@ -137,7 +137,7 @@ void Ppu::write_byte(uint16_t addr, uint8_t value) {
         m_vram[addr - VRAM_BASE] = value;
     } else if (addr >= OAM_BASE && addr <= OAM_END) {
         if (m_oam_blocked) return;
-        m_oam[addr >= OAM_BASE] = value;
+        m_oam[addr - OAM_BASE] = value;
     }
 }
 
@@ -169,10 +169,10 @@ void Ppu::ppu_switch_mode(LcdMode next) {
         break;
     case LcdMode::DATA_TRANSFER:
         m_mode = LcdMode::DATA_TRANSFER;
-        m_vram_blocked = true;
+        //m_vram_blocked = true;
         break;
     case LcdMode::OAM_SEARCH:
-        m_oam_blocked = true;
+        //m_oam_blocked = true;
         m_mode = LcdMode::OAM_SEARCH;
         m_oam_fifo.clear();
         // TODO - check when the interrupt is fired
@@ -268,6 +268,7 @@ int Ppu::ppu_mode_data_xfer(int cycles) {
 }
 
 void Ppu::pixel_fetcher_tick() {
+    // m_vram_blocked = false;
     auto bus = m_bus.lock();
     uint16_t tilemap = m_lcd.lcdc_bg_tilemap() ? 0x9c00 : 0x9800;
     uint16_t tiledata = m_lcd.lcdc_bg_tile_data() ? 0x8000 : 0x8800;
@@ -278,7 +279,7 @@ void Ppu::pixel_fetcher_tick() {
     uint8_t tilemap_col = ((LX + m_lcd.SCX) / 8) % 32;
 
     // tile index
-    uint16_t tilemap_addr = tilemap + tilemap_row * 32 + tilemap_col;
+    uint16_t tilemap_addr = tilemap + (tilemap_row * 32) + tilemap_col;
 
     uint16_t tile_addr = 0;
     if (tiledata == 0x8000) {
@@ -290,14 +291,14 @@ void Ppu::pixel_fetcher_tick() {
         tile_addr = tiledata + (tile_index * 16);
     }
 
-    uint8_t tile_row_data = (bus->read_byte(tile_addr + pixel_y * 2 + 1) << 1) | bus->read_byte(tile_addr + pixel_y * 2);
+    
+    uint8_t tile_row_data_high = bus->read_byte(tile_addr + (pixel_y * 2) + 1);
+    uint8_t tile_row_data_low = bus->read_byte(tile_addr + (pixel_y * 2));
 
-    int pixel_x = (LX + m_lcd.SCX) % 8;
+    uint8_t pixel_x = (LX + m_lcd.SCX) % 8;
+    // The data is 
+    uint8_t color_val = (((tile_row_data_high >> (7 - pixel_x)) << 1)| (tile_row_data_low >> (7 - pixel_x))) & 0x03;
 
-    uint8_t color_val = (tile_row_data >> (7 - pixel_x)) & 0x03;
-
-    // correct
     uint32_t color = gPalette[(m_lcd.BGP >> (2 * color_val)) & 3];
-    // TODO - check me
     m_frame_buffer[m_lcd.LY * dmg::WIDTH + LX] = color;
 }
