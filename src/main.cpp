@@ -70,20 +70,21 @@ int main(int argc, char **argv) {
 
 	// game loop
 	while (running) {
-		game_window.pollEvent(event);
-		if (event.type == sf::Event::Closed) {
-			running = false;
-			break;
-		}
-		switch (event.type) {
-			case sf::Event::KeyPressed:
-				handle_key_pressed(event, joypad);
+		while (game_window.pollEvent(event)) {
+			if (event.type == sf::Event::Closed) {
+				running = false;
 				break;
-			case sf::Event::KeyReleased:
-				handle_key_released(event, joypad);
-				break;
-			default:
-				break;
+			}
+			switch (event.type) {
+				case sf::Event::KeyPressed:
+					handle_key_pressed(event, joypad);
+					break;
+				case sf::Event::KeyReleased:
+					handle_key_released(event, joypad);
+					break;
+				default:
+					break;
+			}
 		}
 
 		// run gameboy only if game is loaded
