@@ -27,6 +27,9 @@ int main(int argc, char **argv) {
 	sf::RenderWindow game_window;
 	game_window.create(sf::VideoMode(dmg::WIDTH, dmg::HEIGHT), "Microboy");
 	game_window.setSize(sf::Vector2u(dmg::WIDTH * dmg::SCALE, dmg::HEIGHT * dmg::SCALE));
+	sf::Texture bg_texture;
+	bg_texture.create(dmg::WIDTH, dmg::HEIGHT);
+	sf::Sprite bgsprite;
 
 	// dmg objects
 	Cpu cpu{};
@@ -107,12 +110,7 @@ int main(int argc, char **argv) {
 		if (draw_frame) {
 			game_window.clear();
 			// update texture
-			sf::Image bg;
-			sf::Texture bg_texture;
-			sf::Sprite bgsprite;
-
-			bg.create(dmg::WIDTH, dmg::HEIGHT, (const uint8_t *)ppu->get_frame_buffer());
-			bg_texture.loadFromImage(bg);
+			bg_texture.update((const uint8_t *) ppu->get_frame_buffer());
 			bgsprite.setTexture(bg_texture);
 			game_window.draw(bgsprite);
 			game_window.display();

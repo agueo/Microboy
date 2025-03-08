@@ -235,6 +235,8 @@ int Ppu::ppu_mode_oam_search(int cycles) {
         // consume the cycles remaining and return the rest for other modes to run
         cycles -= remaining_cycles;
         m_dots = 0;
+        // DO OAM search here
+
         ppu_switch_mode(LcdMode::DATA_TRANSFER);
     } else {
         // consume the cycles
@@ -253,7 +255,7 @@ int Ppu::ppu_mode_data_xfer(int cycles) {
         while(LX <= dmg::WIDTH) {
             // this function will change modes for us
             render_background();
-            // render_window();
+            render_window();
             // render_sprites();
             ++LX;
         }
@@ -271,14 +273,83 @@ int Ppu::ppu_mode_data_xfer(int cycles) {
 // This is rendering the background
 void Ppu::render_background() {
     // m_vram_blocked = false;
+    // if background enable bit is not set we don't render
+    if (m_lcd.lcdc_bg_enable_pri() == 0) {
+        return;
+    }
+
     auto bus = m_bus.lock();
-    uint16_t tilemap = m_lcd.lcdc_bg_tilemap() ? 0x9c00 : 0x9800;
-    uint16_t tiledata = m_lcd.lcdc_bg_tile_data() ? 0x8000 : 0x8800;
+    uint16_t tilemap = m_lcd.lcdc_bg_tilemap() ? TILEMAP_1 : TILEMAP_2;
+    uint16_t tiledata = m_lcd.lcdc_bg_tile_data() ? TILE_DATA_BASE_1 : TILE_DATA_BASE_2;
 
+    // select which tilemap to get data from
     uint8_t tilemap_row = ((m_lcd.LY + m_lcd.SCY) / 8) % 32;
-    uint8_t pixel_y = (m_lcd.LY + m_lcd.SCY) % 8;
-
     uint8_t tilemap_col = ((LX + m_lcd.SCX) / 8) % 32;
+
+    // tile index
+    uint16_t tilemap_addr = tilemap + (tilemap_row * 32) + tilemap_col;
+
+    uint16_t tile_addr = 0;
+    if (tiledata == 0x8000) {
+        uint8_t tile_index = bus->read_byte(tilemap_addr);
+        tile_addr = tiledata + (tile_index * 16);
+    } else {
+        // 0x8800 addressing uses 0x9000 as a base with range -128 to 127
+        int8_t tile_index = bus->read_byte(tilemap_addr);
+        tile_addr = tiledata + (tile_index * 16);
+    }
+
+    // get the tile data bytes here we choose which byte from the tile we want for drawing 
+    // ie: tile_addr + (pixel_y (0-7) * 2) (0 - 14) will choose which byte out of the 16 bytes 
+    // since we are reading 8 bit we get low data then high data
+    uint8_t pixel_y = (m_lcd.LY + m_lcd.SCY) % 8;
+    uint8_t tile_row_data_low = bus->read_byte(tile_addr + (pixel_y * 2));
+    uint8_t tile_row_data_high = bus->read_byte(tile_addr + (pixel_y * 2) + 1);
+
+    // we choose the x pixel within (0-7)
+    uint8_t pixel_x = (LX + m_lcd.SCX) % 8;
+
+    // we get the value we need to get from the palette here
+    // since we draw from left to right we get the leftmost bits from the tile_row_data
+    uint8_t color_val = (((tile_row_data_high >> (7 - pixel_x)) << 1) | (tile_row_data_low >> (7 - pixel_x))) & 0x03;
+
+    // grab a color from the palette
+    // BGP holds the value we need 00-11 for which color to use
+    uint32_t color = gPalette[(m_lcd.BGP >> (2 * color_val)) & 3];
+
+    // output the pixel to the buffer
+    m_frame_buffer[m_lcd.LY * dmg::WIDTH + LX] = color;
+}
+
+void Ppu::render_window() {
+
+    if (m_lcd.lcdc_window_enable() == 0) {
+        // return early since the window is not enabled
+        return;
+    }
+
+    // only render if we are past the WY set
+    if (WLY < m_lcd.WY) {
+        return;
+    }
+
+    // if lx has not reached the wx we skip
+    if (m_lcd.WX > LX + 7) {
+        return;
+    }
+
+    // wx+7 is the same as LX = 0
+    // TODO - fixme
+    uint16_t WLX = LX;//+ 7; 
+    auto bus = m_bus.lock();
+
+    uint16_t tilemap = m_lcd.lcdc_window_tilemap() ? TILEMAP_1 : TILEMAP_2;
+    uint16_t tiledata = m_lcd.lcdc_bg_tile_data() ? TILE_DATA_BASE_1 : TILE_DATA_BASE_2;
+
+    uint8_t tilemap_row = (WLY / 8) % 32;
+    uint8_t pixel_y = (WLY) % 8;
+
+    uint8_t tilemap_col = (WLX / 8) % 32;
 
     // tile index
     uint16_t tilemap_addr = tilemap + (tilemap_row * 32) + tilemap_col;
@@ -297,12 +368,12 @@ void Ppu::render_background() {
     uint8_t tile_row_data_high = bus->read_byte(tile_addr + (pixel_y * 2) + 1);
     uint8_t tile_row_data_low = bus->read_byte(tile_addr + (pixel_y * 2));
 
-    uint8_t pixel_x = (LX + m_lcd.SCX) % 8;
+    uint8_t pixel_x = (WLX) % 8;
     // The data is 
     uint8_t color_val = (((tile_row_data_high >> (7 - pixel_x)) << 1)| (tile_row_data_low >> (7 - pixel_x))) & 0x03;
 
     // grab a color from the palette
     uint32_t color = gPalette[(m_lcd.BGP >> (2 * color_val)) & 3];
     // output the pixel to the buffer
-    m_frame_buffer[m_lcd.LY * dmg::WIDTH + LX] = color;
+    m_frame_buffer[m_lcd.LY * dmg::WIDTH + WLX] = color;
 }

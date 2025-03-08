@@ -11,11 +11,15 @@
 
 class MemoryBus;
 
-constexpr int SCAN_LINE_CYCLES = 456;
-constexpr int OAM_CYCLES = 80;
-constexpr int VBLANK_LINES = 10;
-constexpr int PIXEL_TRANSFER_CYCLES = 172;
-constexpr int HBLANK_CYCLES = 204;
+inline constexpr int SCAN_LINE_CYCLES = 456;
+inline constexpr int OAM_CYCLES = 80;
+inline constexpr int VBLANK_LINES = 10;
+inline constexpr int PIXEL_TRANSFER_CYCLES = 172;
+inline constexpr int HBLANK_CYCLES = 204;
+inline constexpr uint16_t TILEMAP_1 = 0x9c00; 
+inline constexpr uint16_t TILEMAP_2 = 0x9800;
+inline constexpr uint16_t TILE_DATA_BASE_1 = 0x8000; 
+inline constexpr uint16_t TILE_DATA_BASE_2 = 0x9000;
 
 class Ppu {
 public:
