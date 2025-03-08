@@ -309,7 +309,7 @@ int Cpu::handle_opcode() {
 	{
 		if (!m_flags.Z) {
 			opcode_call(imm_u16);
-			return 12;
+			return CYCLE_TABLE_DEBUG[m_opcode].cycles_extra;
 		}
 		break;
 	}
@@ -318,7 +318,7 @@ int Cpu::handle_opcode() {
 	{
 		if (!m_flags.C) {
 			opcode_call(imm_u16);
-			return 12;
+			return CYCLE_TABLE_DEBUG[m_opcode].cycles_extra;
 		}
 		break;
 	}
@@ -327,7 +327,7 @@ int Cpu::handle_opcode() {
 	{
 		if (m_flags.Z) {
 			opcode_call(imm_u16);
-			return 12;
+			return CYCLE_TABLE_DEBUG[m_opcode].cycles_extra;
 		}
 		break;
 	}
@@ -336,7 +336,7 @@ int Cpu::handle_opcode() {
 	{
 		if (m_flags.C) {
 			opcode_call(imm_u16);
-			return 12;
+			return CYCLE_TABLE_DEBUG[m_opcode].cycles_extra;
 		}
 		break;
 	}
@@ -358,7 +358,7 @@ int Cpu::handle_opcode() {
 	{
 		if (!m_flags.Z) {
 			opcode_ret();
-			return 12;
+			return CYCLE_TABLE_DEBUG[m_opcode].cycles_extra;
 		}
 		break;
 	}
@@ -367,7 +367,7 @@ int Cpu::handle_opcode() {
 	{
 		if (!m_flags.C) {
 			opcode_ret();
-			return 12;
+			return CYCLE_TABLE_DEBUG[m_opcode].cycles_extra;
 		}
 		break;
 	}
@@ -376,7 +376,7 @@ int Cpu::handle_opcode() {
 	{
 		if (m_flags.Z) {
 			opcode_ret();
-			return 12;
+			return CYCLE_TABLE_DEBUG[m_opcode].cycles_extra;
 		}
 		break;
 	}
@@ -385,7 +385,7 @@ int Cpu::handle_opcode() {
 	{
 		if (m_flags.C) {
 			opcode_ret();
-			return 12;
+			return CYCLE_TABLE_DEBUG[m_opcode].cycles_extra;
 		}
 		break;
 	}
@@ -408,7 +408,7 @@ int Cpu::handle_opcode() {
 	{
 		if (!m_flags.Z) {
 			m_PC += (int8_t)imm_u8;
-			return 4;
+			return CYCLE_TABLE_DEBUG[m_opcode].cycles_extra;
 		}
 		break;
 	}
@@ -417,7 +417,7 @@ int Cpu::handle_opcode() {
 	{
 		if (m_flags.Z) {
 			m_PC += (int8_t)imm_u8;
-			return 4;
+			return CYCLE_TABLE_DEBUG[m_opcode].cycles_extra;
 		}
 		break;
 	}
@@ -426,7 +426,7 @@ int Cpu::handle_opcode() {
 	{
 		if (!m_flags.C) {
 			m_PC += (int8_t)imm_u8;
-			return 4;
+			return CYCLE_TABLE_DEBUG[m_opcode].cycles_extra;
 		}
 		break;
 	}
@@ -435,7 +435,7 @@ int Cpu::handle_opcode() {
 	{
 		if (m_flags.C) {
 			m_PC += (int8_t)imm_u8;
-			return 4;
+			return CYCLE_TABLE_DEBUG[m_opcode].cycles_extra;
 		}
 		break;
 	}
@@ -450,7 +450,7 @@ int Cpu::handle_opcode() {
 	{
 		if (!m_flags.Z) {
 			m_PC = imm_u16;
-			return 4;
+			return CYCLE_TABLE_DEBUG[m_opcode].cycles_extra;
 		}
 		break;
 	}
@@ -459,7 +459,7 @@ int Cpu::handle_opcode() {
 	{
 		if (!m_flags.C) {
 			m_PC = imm_u16;
-			return 4;
+			return CYCLE_TABLE_DEBUG[m_opcode].cycles_extra;
 		}
 		break;
 	}
@@ -468,7 +468,7 @@ int Cpu::handle_opcode() {
 	{
 		if (m_flags.Z) {
 			m_PC = imm_u16;
-			return 4;
+			return CYCLE_TABLE_DEBUG[m_opcode].cycles_extra;
 		}
 		break;
 	}
@@ -477,7 +477,7 @@ int Cpu::handle_opcode() {
 	{
 		if (m_flags.C) {
 			m_PC = imm_u16;
-			return 4;
+			return CYCLE_TABLE_DEBUG[m_opcode].cycles_extra;
 		}
 		break;
 	}
@@ -841,7 +841,8 @@ int Cpu::handle_opcode() {
 	}
 	default: Unimplemented_Opcode(m_opcode);
 	}
-	return 0;
+
+	return CYCLE_TABLE_DEBUG[m_opcode].cycles;
 }
 
 int Cpu::handle_cb_prefix() {
@@ -1142,5 +1143,5 @@ int Cpu::handle_cb_prefix() {
 	}
 	default: Unimplemented_Opcode_CB(m_opcode);
 	}
-	return 0;
+	return CYCLE_TABLE_DEBUG_CB[m_opcode].cycles;
 }

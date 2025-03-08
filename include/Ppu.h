@@ -41,7 +41,9 @@ private:
     int ppu_mode_vblank(int cycles);
     int ppu_mode_data_xfer(int cycles);
     int ppu_mode_oam_search(int cycles);
-    void pixel_fetcher_tick();
+    void render_background();
+    void render_window();
+    void render_sprites();
 
     bool m_frame_ready{false};
     uint16_t LX{0};
@@ -55,9 +57,8 @@ private:
 	std::vector<uint8_t> m_vram{};
 	std::vector<uint8_t> m_oam{};
 
-    std::vector<uint8_t> m_pixel_fifo{};
     // TODO see if we need this
-    std::vector<OamAttribute> m_oam_fifo{};
+    std::vector<OamAttribute> m_oam_table{};
 
     std::weak_ptr<MemoryBus> m_bus{};
     std::vector<uint32_t> m_frame_buffer{};

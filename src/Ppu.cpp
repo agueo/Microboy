@@ -6,6 +6,7 @@
 
 #include <vector>
 
+// colors in ARGB
 const std::vector<uint32_t> gPalette{0xff89d795, 0xff629A6A, 0xff3B5C40, 0xff141F15};
 //const std::vector<uint32_t> gPalette{0xff9a9e3f, 0xff496b22, 0xff0e450b, 0xff1b2a09};
 
@@ -20,8 +21,7 @@ Ppu::Ppu()
   m_lcd{},
   m_vram(0x2000, 0),
   m_oam(0xA0, 0),
-  m_pixel_fifo{0},
-  m_oam_fifo{0},
+  m_oam_table{0},
   m_bus{},
   m_frame_buffer(dmg::WIDTH * dmg::HEIGHT, 0),
   m_int_observer{nullptr} {}
@@ -67,8 +67,7 @@ void Ppu::reset() {
     m_lcd.WX = 0x00;
     std::fill(m_vram.begin(), m_vram.end(), 0);
     std::fill(m_oam.begin(), m_oam.end(), 0);
-    m_pixel_fifo.clear();
-    m_oam_fifo.clear();
+    m_oam_table.clear();
     std::fill(m_frame_buffer.begin(), m_frame_buffer.end(), gPalette[0]);
 }
 
@@ -174,7 +173,7 @@ void Ppu::ppu_switch_mode(LcdMode next) {
     case LcdMode::OAM_SEARCH:
         //m_oam_blocked = true;
         m_mode = LcdMode::OAM_SEARCH;
-        m_oam_fifo.clear();
+        m_oam_table.clear();
         // TODO - check when the interrupt is fired
         stat_int = m_lcd.stat_get_oam_int_enabled();
         break;
@@ -253,7 +252,9 @@ int Ppu::ppu_mode_data_xfer(int cycles) {
         m_dots = 0;
         while(LX <= dmg::WIDTH) {
             // this function will change modes for us
-            pixel_fetcher_tick();
+            render_background();
+            // render_window();
+            // render_sprites();
             ++LX;
         }
         LX = 0;
@@ -267,7 +268,8 @@ int Ppu::ppu_mode_data_xfer(int cycles) {
     // TODO - do other stuff here for window and sprite
 }
 
-void Ppu::pixel_fetcher_tick() {
+// This is rendering the background
+void Ppu::render_background() {
     // m_vram_blocked = false;
     auto bus = m_bus.lock();
     uint16_t tilemap = m_lcd.lcdc_bg_tilemap() ? 0x9c00 : 0x9800;
@@ -291,7 +293,7 @@ void Ppu::pixel_fetcher_tick() {
         tile_addr = tiledata + (tile_index * 16);
     }
 
-    
+    // get the tile data bytes
     uint8_t tile_row_data_high = bus->read_byte(tile_addr + (pixel_y * 2) + 1);
     uint8_t tile_row_data_low = bus->read_byte(tile_addr + (pixel_y * 2));
 
@@ -299,6 +301,8 @@ void Ppu::pixel_fetcher_tick() {
     // The data is 
     uint8_t color_val = (((tile_row_data_high >> (7 - pixel_x)) << 1)| (tile_row_data_low >> (7 - pixel_x))) & 0x03;
 
+    // grab a color from the palette
     uint32_t color = gPalette[(m_lcd.BGP >> (2 * color_val)) & 3];
+    // output the pixel to the buffer
     m_frame_buffer[m_lcd.LY * dmg::WIDTH + LX] = color;
 }

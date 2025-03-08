@@ -77,10 +77,10 @@ int main(int argc, char **argv) {
 			}
 			switch (event.type) {
 				case sf::Event::KeyPressed:
-					handle_key_pressed(event, joypad);
+					handle_key_pressed(event, *joypad);
 					break;
 				case sf::Event::KeyReleased:
-					handle_key_released(event, joypad);
+					handle_key_released(event, *joypad);
 					break;
 				default:
 					break;

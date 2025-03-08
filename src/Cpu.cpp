@@ -1,5 +1,6 @@
-//#include <fmt/core.h>
 #include <stdio.h>
+
+#include <fmt/core.h>
 
 #include "Cpu.h"
 #include "Opcode.h"
@@ -149,7 +150,7 @@ void Cpu::write_word(RegisterName16Bit reg, uint16_t value) {
 
 inline void Cpu::fetch() {
 	m_opcode = m_bus->read_byte(m_PC);
-	// fmt::print("PC: {:#04x} Opcode: {:#02x}: {}\n", m_PC, m_opcode, CYCLE_TABLE_DEBUG[m_opcode].name);
+	//fmt::print("PC: {:#04x} Opcode: {:#02x}: {}\n", m_PC, m_opcode, CYCLE_TABLE_DEBUG[m_opcode].name);
 }
 
 int Cpu::decode() {
@@ -159,13 +160,13 @@ int Cpu::decode() {
 	if (m_opcode == 0xcb) {
 		++m_PC;
 		m_opcode = m_bus->read_byte(m_PC);
-		// fmt::print("0xCB prefixed {:#02x}: {}\n", m_opcode, CYCLE_TABLE_DEBUG_CB[m_opcode].name);
+		//fmt::print("0xCB prefixed {:#02x}: {}\n", m_opcode, CYCLE_TABLE_DEBUG_CB[m_opcode].name);
 		inc_pc = CYCLE_TABLE_DEBUG_CB[m_opcode].len-1;
-		cycles = CYCLE_TABLE_DEBUG_CB[m_opcode].cycles;
+		//cycles = CYCLE_TABLE_DEBUG_CB[m_opcode].cycles;
 		m_is_cb = true;
 	} else {
 		inc_pc = CYCLE_TABLE_DEBUG[m_opcode].len;
-		cycles = CYCLE_TABLE_DEBUG[m_opcode].cycles;
+		//cycles = CYCLE_TABLE_DEBUG[m_opcode].cycles;
 	}
 
 	// Fetched data, registers and immediates to use
@@ -195,8 +196,10 @@ int Cpu::service_interrupt() {
 	// ISR vectors
 	static uint8_t isr_vectors[5]{ 0x40, 0x48, 0x50, 0x58, 0x60 };
 
+	uint8_t IE = m_bus->read_byte(IE_ADDR);
+	uint8_t IF = m_bus->read_byte(IF_ADDR);
 	// Exit halt if IF & IE are non-zero NOTE: TODO emulate halt bug
-	if (m_bus->read_byte(IE_ADDR) & m_bus->read_byte(IF_ADDR)) {
+	if (IE && IF) {
 		// in either case if we have a pending interrupt
 		// we leave halt
 		if (IME == false) {
@@ -212,12 +215,14 @@ int Cpu::service_interrupt() {
 	// check each interrupt bit from highest priority to lowest
 	for (int i = 0; i < 5; ++i) {
 		// check IME and IF and IE bits
-		uint8_t IE = m_bus->read_byte(IE_ADDR);
-		uint8_t IF = m_bus->read_byte(IF_ADDR);
 		if (IME &&
-		   ((IE >> i) & 0x1) &&
+		   ((IE >> i) & 0x1) &
 		   ((IF >> i) & 0x1))
 		{
+			// fmt::print("IF: {:4x}, IE: {:4x}\n", IF, IE);
+			// fmt::print("servicing interrupt: {}\n", i);
+			// IE = m_bus->read_byte(IE_ADDR);
+			// IF = m_bus->read_byte(IF_ADDR);
 			// ack interrupt by disabling IME
 			IME = false;
 			// ack interrupt request bit in IF
@@ -226,7 +231,6 @@ int Cpu::service_interrupt() {
 			m_bus->write_byte(IF_ADDR, IF);
 			// call the handler
 			opcode_call(isr_vectors[i]);
-			//fmt::print("servicing interrupt: {}\n", i);
 			return 20; // isr comsumes 5 M cycles
 		}
 	}
