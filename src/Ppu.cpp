@@ -14,6 +14,7 @@ Ppu::Ppu()
 : m_frame_ready{false},
   LX{0},
   WLY{0},
+  m_sprites_visible{0},
   m_vram_blocked{false},
   m_oam_blocked{false},
   m_dots{0},
@@ -67,6 +68,7 @@ void Ppu::reset() {
     m_lcd.WX = 0x00;
     std::fill(m_vram.begin(), m_vram.end(), 0);
     std::fill(m_oam.begin(), m_oam.end(), 0);
+    // std::fill(m_oam_table.begin(), m_oam_table.end(), 0);
     m_oam_table.clear();
     std::fill(m_frame_buffer.begin(), m_frame_buffer.end(), gPalette[0]);
 }
@@ -173,6 +175,7 @@ void Ppu::ppu_switch_mode(LcdMode next) {
     case LcdMode::OAM_SEARCH:
         //m_oam_blocked = true;
         m_mode = LcdMode::OAM_SEARCH;
+        //std::fill(m_oam_table.begin(), m_oam_table.end(), 0);
         m_oam_table.clear();
         // TODO - check when the interrupt is fired
         stat_int = m_lcd.stat_get_oam_int_enabled();
@@ -236,7 +239,9 @@ int Ppu::ppu_mode_oam_search(int cycles) {
         cycles -= remaining_cycles;
         m_dots = 0;
         // DO OAM search here
-
+        for(size_t i = 0; i < m_oam.size(); i += 4) {
+            m_oam_table.emplace_back(m_oam[i], m_oam[i+1], m_oam[i+2], m_oam[i+3]);
+        }
         ppu_switch_mode(LcdMode::DATA_TRANSFER);
     } else {
         // consume the cycles
@@ -256,9 +261,10 @@ int Ppu::ppu_mode_data_xfer(int cycles) {
             // this function will change modes for us
             render_background();
             render_window();
-            // render_sprites();
+            render_sprites();
             ++LX;
         }
+        m_sprites_visible = 0;
         LX = 0;
         ppu_switch_mode(LcdMode::HBLANK);
     } else {
@@ -376,4 +382,72 @@ void Ppu::render_window() {
     uint32_t color = gPalette[(m_lcd.BGP >> (2 * color_val)) & 3];
     // output the pixel to the buffer
     m_frame_buffer[m_lcd.LY * dmg::WIDTH + WLX] = color;
+}
+
+void Ppu::render_sprites() {
+    if (m_lcd.lcdc_obj_enable() == 0) {
+        // return early since the object drawing is not enabled
+        return;
+    }
+    if (m_sprites_visible == 10) {
+        return;
+    }
+
+    auto bus = m_bus.lock();
+    int sprite_visible = 0;
+    uint16_t tiledata = TILE_DATA_BASE_1;
+    uint8_t pixel_x;
+    uint8_t pixel_y;
+    uint16_t tile_addr = 0;
+    uint8_t tile_row_data_high;
+    uint8_t tile_row_data_low;
+    uint8_t color_val;
+    uint8_t palette;
+    uint32_t color;
+
+    OamAttribute *attr = nullptr;
+    // find an object
+    for (auto it = m_oam_table.begin(); it != m_oam_table.end(); ++it) {
+        attr = &(*it);
+        // if object is 8x8 and not at y=16 it's hidden
+        if (attr->y_pos < 16 && !m_lcd.lcdc_obj_size()) {
+            continue;
+        }
+
+        // if ly is already ahead of this object or we still havent reached it skip it
+        if (attr->y_pos + 16 < m_lcd.LY || attr->y_pos > m_lcd.LY) {
+            continue;
+        }
+
+        // if lx is 0 and attr->xpos = 8 then we draw the object at 0
+        if (LX >= attr->x_pos - 8 && LX <= attr->x_pos) {
+            ++sprite_visible;
+            break;
+        }
+    }
+    if (!sprite_visible) {
+        return;
+    }
+
+    tile_addr = tiledata + (attr->tile_index * 16);
+    pixel_y = m_lcd.LY % 8; // TODO thisis probably wrong
+    palette = is_bit_set(attr->attributes, 4) ?  m_lcd.OBP1 : m_lcd.OBP1;
+    
+    // get the tile data bytes
+    tile_row_data_high = bus->read_byte(tile_addr + (pixel_y * 2) + 1);
+    tile_row_data_low = bus->read_byte(tile_addr + (pixel_y * 2));
+
+    pixel_x = LX % 8;
+    // TODO Maybe do the flipping here
+    color_val = (((tile_row_data_high >> (7 - pixel_x)) << 1)| (tile_row_data_low >> (7 - pixel_x))) & 0x03;
+
+    // grab a color from the palette
+    color = gPalette[(palette >> (2 * color_val)) & 3];
+
+    // output the pixel to the buffer
+    // TODO - priority
+    // check priority if set it will only draw above bgp 0
+    // so grab the underlying color and check what bgp position it is. if 0 draw else skip
+    m_frame_buffer[m_lcd.LY * dmg::WIDTH + LX] = color;
+    ++m_sprites_visible;
 }

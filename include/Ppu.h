@@ -52,6 +52,7 @@ private:
     bool m_frame_ready{false};
     uint16_t LX{0};
     uint16_t WLY{0};
+    uint8_t m_sprites_visible{0};
     bool m_vram_blocked{false};
     bool m_oam_blocked{false};
     uint32_t m_dots{0};
