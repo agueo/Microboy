@@ -2,7 +2,7 @@
 Gamboy DMG emulator written in C++ using SDL2 for graphics. Still WIP. 
 
 ## ScreenShots
-![dmg_acid2 vram dump](assets/microboy_acid2.png?raw=true "vram dump")
+![passing_cpu_tests](assets/cpu_tests.png?raw=true "cpu_tests")
 
 ## Resources
 [Pandocs](https://gbdev.io/pandocs/)
