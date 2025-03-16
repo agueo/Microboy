@@ -3,10 +3,15 @@
 
 #include <cstdint>
 
+constexpr uint8_t SPRITE_BGP = 4;
+constexpr uint8_t SPRITE_X_FLIP = 5;
+constexpr uint8_t SPRITE_Y_FLIP = 6;
+constexpr uint8_t SPRITE_BG_PRI = 7;
+
 #pragma pack(push, 0)
 struct OamAttribute {
-    uint8_t y_pos;
-    uint8_t x_pos;
+    int y_pos;
+    int x_pos;
     uint8_t tile_index;
     /* OAM Attributes
      * Bit7   BG and Window over OBJ (0=No, 1=BG and Window colors 1-3 over the OBJ)

@@ -56,7 +56,6 @@ void JoyPad::handle_press(JoyPadInput input){
         break;
     }
     m_int_obs->schedule_interrupt(InterruptSource::JOYPAD);
-
 }
 
 void JoyPad::handle_release(JoyPadInput input){

@@ -45,6 +45,7 @@ private:
     int ppu_mode_vblank(int cycles);
     int ppu_mode_data_xfer(int cycles);
     int ppu_mode_oam_search(int cycles);
+    void search_oam();
     void render_background();
     void render_window();
     void render_sprites();
@@ -58,6 +59,9 @@ private:
     uint32_t m_dots{0};
     LcdMode m_mode{LcdMode::HBLANK};
     Lcd m_lcd{};
+    bool m_was_window_drawn{false};
+    OamAttribute *m_current_sprite{nullptr};
+    bool m_sprite_rendering_started{false};
 
 	std::vector<uint8_t> m_vram{};
 	std::vector<uint8_t> m_oam{};
